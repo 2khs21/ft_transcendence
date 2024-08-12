@@ -37,6 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+	'rest_framework',
+	'users',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -103,6 +106,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# 인증 방식을 토큰 기반으로
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
