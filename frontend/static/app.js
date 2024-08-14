@@ -1,60 +1,94 @@
-document.addEventListener("DOMContentLoaded", function () {
-  const content = document.getElementById("content");
+// app.js
 
-  function loadPage(page) {
-    switch (page) {
-      case "home":
-        loadHome();
-        break;
-      case "chat":
-        loadChat();
-        break;
-      case "profile":
-        loadProfile();
-        break;
-      case "friend":
-        loadFriend();
-        break;
-      default:
-        content.innerHTML = "<h2>Page not found</h2>";
-    }
+// 페이지 렌더링 함수들을 가져옵니다.
+import { renderLogin } from "./login.js";
+import { renderRegister } from "./register.js";
+import { renderHome } from "./home.js";
+import { renderGame } from "./game.js";
+import { renderProfile } from "./profile.js";
+
+// 라우트 정의
+const routes = {
+  "/": renderHome,
+  "/login": renderLogin,
+  "/register": renderRegister,
+  "/game": renderGame,
+  "/profile": renderProfile,
+};
+
+const app = document.getElementById("app");
+const nav = document.getElementById("main-nav");
+
+export function navigate(path, pushState = true) {
+  if (pushState) {
+    history.pushState({ path }, "", path);
+  }
+  updateContent(path);
+}
+
+function updateContent(path) {
+  const renderFunction = routes[path] || routes["/"];
+  app.innerHTML = "";
+  renderFunction(app);
+  updateNav();
+}
+
+function updateNav() {
+  const isLoggedIn = !!localStorage.getItem("token");
+  nav.style.display = isLoggedIn ? "block" : "none";
+}
+
+function checkAuthAndRedirect() {
+  const isLoggedIn = !!localStorage.getItem("token");
+  const currentPath = window.location.pathname;
+
+  if (!isLoggedIn && currentPath !== "/login" && currentPath !== "/register") {
+    console.log("No login");
+    navigate("/login", false);
+    return;
   }
 
-  function navigateTo(page) {
-    loadPage(page);
-    history.pushState({ page: page }, "", `#${page}`);
+  if (isLoggedIn && (currentPath === "/login" || currentPath === "/register")) {
+    console.log("Yes login");
+    navigate("/", false);
+    return;
   }
 
-  // 탭을 클릭할 때 페이지 로드 및 히스토리 업데이트
-  document.getElementById("home-tab").addEventListener("click", function () {
-    navigateTo("home");
-  });
+  updateContent(currentPath);
+}
 
-  document.getElementById("chat-tab").addEventListener("click", function () {
-    navigateTo("chat");
-  });
-
-  document.getElementById("profile-tab").addEventListener("click", function () {
-    navigateTo("profile");
-  });
-
-  document.getElementById("friend-tab").addEventListener("click", function () {
-    navigateTo("friend");
-  });
-
-  // popstate 이벤트 처리 (뒤로 가기, 앞으로 가기)
-  window.addEventListener("popstate", function (event) {
-    const page = event.state ? event.state.page : null;
-    if (page) {
-      loadPage(page);
-    } else {
-      const fallbackPage = window.location.hash.replace("#", "") || "home";
-      loadPage(fallbackPage);
-    }
-  });
-
-  // 초기 페이지 로드
-  const initialPage = window.location.hash.replace("#", "") || "home";
-  loadPage(initialPage);
-  history.replaceState({ page: initialPage }, "", `#${initialPage}`);
+window.addEventListener("popstate", (event) => {
+  const path = event.state?.path || window.location.pathname;
+  checkAuthAndRedirect();
 });
+
+document.body.addEventListener("click", (e) => {
+  if (e.target.matches("[data-link]")) {
+    e.preventDefault();
+    navigate(e.target.getAttribute("href"));
+  }
+});
+
+function logout() {
+  localStorage.removeItem("token");
+  navigate("/login");
+}
+
+document.getElementById("logout-btn").addEventListener("click", logout);
+
+function init() {
+  checkAuthAndRedirect();
+
+  document
+    .getElementById("home-tab")
+    .addEventListener("click", () => navigate("/"));
+  document
+    .getElementById("game-tab")
+    .addEventListener("click", () => navigate("/game"));
+  document
+    .getElementById("profile-tab")
+    .addEventListener("click", () => navigate("/profile"));
+}
+
+// DOMContentLoaded 이벤트를 사용하여 초기화
+document.addEventListener("DOMContentLoaded", init);

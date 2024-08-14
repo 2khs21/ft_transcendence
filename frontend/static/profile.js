@@ -1,7 +1,7 @@
-function loadProfile() {
-  const content = document.getElementById("content");
-  content.innerHTML = `
+//profile.js
+export function renderProfile(container) {
+  container.innerHTML = `
 			<h2>Profile Page</h2>
-			<p>This is the profile page content.</p>
+			<p>User profile information goes here.</p>
 	`;
 }
