@@ -41,6 +41,8 @@ INSTALLED_APPS = [
 	'rest_framework',
 	'users',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',
+
 ]
 
 MIDDLEWARE = [
@@ -110,10 +112,19 @@ AUTH_PASSWORD_VALIDATORS = [
 # 인증 방식을 토큰 기반으로
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+		'rest_framework_simplejwt.authentication.JWTAuthentication',
+
     ],
 }
 
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 

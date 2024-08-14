@@ -34,12 +34,12 @@ function updateContent(path) {
 }
 
 function updateNav() {
-  const isLoggedIn = !!localStorage.getItem("token");
+  const isLoggedIn = !!localStorage.getItem("accessToken"); // 'token' 대신 'accessToken' 사용
   nav.style.display = isLoggedIn ? "block" : "none";
 }
 
 function checkAuthAndRedirect() {
-  const isLoggedIn = !!localStorage.getItem("token");
+  const isLoggedIn = !!localStorage.getItem("accessToken"); // 'token' 대신 'accessToken' 사용
   const currentPath = window.location.pathname;
 
   if (!isLoggedIn && currentPath !== "/login" && currentPath !== "/register") {
@@ -57,23 +57,11 @@ function checkAuthAndRedirect() {
   updateContent(currentPath);
 }
 
-window.addEventListener("popstate", (event) => {
-  const path = event.state?.path || window.location.pathname;
-  checkAuthAndRedirect();
-});
-
-document.body.addEventListener("click", (e) => {
-  if (e.target.matches("[data-link]")) {
-    e.preventDefault();
-    navigate(e.target.getAttribute("href"));
-  }
-});
-
 function logout() {
-  localStorage.removeItem("token");
+  localStorage.removeItem("accessToken"); // 'token' 대신 'accessToken' 사용
+  localStorage.removeItem("refreshToken"); // refresh 토큰도 제거
   navigate("/login");
 }
-
 document.getElementById("logout-btn").addEventListener("click", logout);
 
 function init() {
