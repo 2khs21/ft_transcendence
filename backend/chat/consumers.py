@@ -29,62 +29,32 @@ class ChatConsumer(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         message = text_data_json['message']
         username = text_data_json['username']
-
-        # 귓속말 처리
-        if message.startswith('/w '):
-            parts = message.split(' ', 2)
-            if len(parts) == 3:
-                target_username = parts[1]
-                whisper_message = parts[2]
-                await self.whisper(username, target_username, whisper_message)
-            return
-
-        # Send message to room group
+        to_username = text_data_json.get('to_username', 'everyone')
+        whisper = text_data_json.get('whisper', False)
+        
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'chat_message',
                 'message': message,
-                'username': username
+                'username': username,
+                'to_username': to_username,
+                'whisper': whisper,
             }
         )
 
     async def chat_message(self, event):
-        message = event['message']
-        username = event['username']
+        # 필수 키들을 가져옴. 존재하지 않을 경우 기본값을 설정
+        message = event.get('message', 'No message')
+        username = event.get('username', 'Unknown')
+        to_username = event.get('to_username', 'everyone')  # 기본값을 설정해 오류 방지
+        whisper = event.get('whisper', False)  # 기본값 False로 설정
+
 
         # Send message to WebSocket
         await self.send(text_data=json.dumps({
             'message': message,
-            'username': username
+            'username': username,
+            'to_username': to_username,
+            'whisper' : whisper, 
         }))
-
-    # async def whisper(self, from_username, to_username, message):
-    #     # 대상 사용자 찾기
-    #     to_user = await sync_to_async(User.objects.filter)(username=to_username).first()
-    #     if to_user:
-    #         # 대상 사용자의 채널 이름 찾기 (이 부분은 실제 구현에서 더 복잡할 수 있습니다)
-    #         # 여기서는 단순화를 위해 전체 그룹에 보내고 클라이언트에서 필터링하는 방식을 사용합니다
-    #         await self.channel_layer.group_send(
-    #             self.room_group_name,
-    #             {
-    #                 'type': 'whisper_message',
-    #                 'message': message,
-    #                 'from_username': from_username,
-    #                 'to_username': to_username
-    #             }
-    #         )
-    #     else:
-    #         # 발신자에게 오류 메시지 보내기
-    #         await self.send(text_data=json.dumps({
-    #             'message': f"User {to_username} not found.",
-    #             'username': 'System'
-    #         }))
-
-    # async def whisper_message(self, event):
-    #     await self.send(text_data=json.dumps({
-    #         'whisper': True,
-    #         'message': event['message'],
-    #         'from_username': event['from_username'],
-    #         'to_username': event['to_username']
-    #     }))

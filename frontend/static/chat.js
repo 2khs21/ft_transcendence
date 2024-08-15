@@ -1,3 +1,4 @@
+// chat.js
 import { authState } from "./app.js";
 
 export let chatSocket = null; // WebSocket 객체를 전역 변수로 선언
@@ -45,47 +46,57 @@ export function initializeChat() {
       document.querySelector("#chat-send").click();
     }
   };
-
   document.querySelector("#chat-send").onclick = function (e) {
     const messageInputDom = document.querySelector("#chat-input");
-    const message = messageInputDom.value;
-    const username = localStorage.getItem("username"); // 사용자 이름 가져오기
+    let message = messageInputDom.value; // const를 let으로 변경
+    const username = localStorage.getItem("username");
 
-    // 메시지와 사용자 이름을 콘솔에 로그로 출력
+    let to_username = "everyone";
+    let whisper = false;
+
+    // 귓속말 처리
+    if (message.startsWith("/w ")) {
+      const parts = message.split(" ");
+      if (parts.length >= 3) {
+        to_username = parts[1];
+        message = parts.slice(2).join(" "); // 여기서 message를 재할당
+        whisper = true;
+      }
+    }
+
     console.log("Sending message:", message);
     console.log("From user:", username);
+    console.log("To user:", to_username);
 
-    // WebSocket 서버로 메시지 전송
     chatSocket.send(
       JSON.stringify({
         message: message,
         username: username,
+        to_username: to_username,
+        whisper: whisper,
       })
     );
 
-    // 메시지 전송 후 입력 필드를 비움
     messageInputDom.value = "";
-
-    // 전송 완료 로그
     console.log("Message sent successfully.");
   };
+}
+function displayMessage(data) {
+  const chatBox = document.querySelector("#chat-box");
+  console.log("displayMessage", data);
 
-  function displayMessage(data) {
-    const chatBox = document.querySelector("#chat-box");
-    console.log("displayMessage");
-    if (data.whisper) {
-      // 귓속말 처리
-      if (
-        data.to_username === localStorage.getItem("username") ||
-        data.from_username === localStorage.getItem("username")
-      ) {
-        chatBox.innerHTML += `<div>(Whisper) ${data.from_username}: ${data.message}</div>`;
-      }
-    } else {
-      chatBox.innerHTML += `<div>${data.username}: ${data.message}</div>`;
+  if (data.whisper == true) {
+    // 'yes'로 비교
+    console.log("Display whisper msg");
+    if (
+      data.to_username === localStorage.getItem("username") ||
+      data.username === localStorage.getItem("username")
+    ) {
+      chatBox.innerHTML += `<div>(Whisper) ${data.username} to ${data.to_username}: ${data.message}</div>`;
     }
-    console.log(data);
-    // 스크롤을 항상 아래로 유지
-    chatBox.scrollTop = chatBox.scrollHeight;
+  } else {
+    chatBox.innerHTML += `<div>${data.username}: ${data.message}</div>`;
   }
+
+  chatBox.scrollTop = chatBox.scrollHeight;
 }

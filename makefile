@@ -3,7 +3,8 @@ up:
 
 build:
 	docker compose build
-
+back_re:
+	docker-compose up -d --no-deps backend
 down:
 	docker compose down --volumes
 
