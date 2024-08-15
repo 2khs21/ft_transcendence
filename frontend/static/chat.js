@@ -4,6 +4,10 @@ import { authState } from "./app.js";
 export let chatSocket = null; // WebSocket 객체를 전역 변수로 선언
 
 export function initializeChat() {
+  if (document.getElementById("chat-container")) {
+    console.log("Chat already initialized, skipping");
+    return;
+  }
   const chatContainer = document.createElement("div");
   chatContainer.id = "chat-container";
   chatContainer.innerHTML = `

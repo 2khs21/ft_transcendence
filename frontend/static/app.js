@@ -125,15 +125,15 @@ function init() {
   document
     .getElementById("profile-tab")
     .addEventListener("click", () => navigate("/profile"));
-  // 토큰 확인 로직 상세화
+
+  // 토큰 확인 후 chat-container가 없을 때만 initializeChat 호출
   const accessToken = localStorage.getItem("accessToken");
   console.log("Access token at init:", accessToken);
-
-  if (accessToken) {
-    console.log("Access token found, length:", accessToken.length);
+  if (accessToken && !document.getElementById("chat-container")) {
+    console.log("Access token found, initializing chat");
     initializeChat();
   } else {
-    console.log("No access token found in localStorage");
+    console.log("No access token found or chat already initialized");
   }
 
   // localStorage의 모든 키 출력
