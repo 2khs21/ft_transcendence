@@ -1,11 +1,11 @@
 up:
-	docker compose up
-
-build:
 	docker compose up --build
 
+build:
+	docker compose build
+
 down:
-	docker compose down --volume
+	docker compose down --volumes
 
 fclean:
 	-docker ps -qa | xargs -r docker rm
