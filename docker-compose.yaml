@@ -10,12 +10,20 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
 
   backend:
     restart: unless-stopped
     build: ./backend
     command: >
-      sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+      sh -c "
+      pip install -r requirements.txt &&
+      python manage.py migrate &&
+      daphne transcendence_backend.asgi:application --bind 0.0.0.0 --port 8000
+      "
     volumes:
       - ./backend:/code
     ports:
@@ -26,6 +34,8 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - DJANGO_SETTINGS_MODULE=transcendence_backend.settings
+      - PYTHONPATH=/code
 
   frontend:
     restart: unless-stopped
