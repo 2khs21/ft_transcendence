@@ -145,4 +145,22 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("DOMContentLoaded event fired");
 
   init();
+  initializeCSRF();
 });
+
+async function initializeCSRF() {
+  await fetch("/api/core/set-csrf-token/", {
+    method: "GET",
+    credentials: "include",
+  })
+    .then((response) => {
+      if (response.ok) {
+        console.log("CSRF token set successfully");
+      } else {
+        console.error("Failed to set CSRF token");
+      }
+    })
+    .catch((error) => {
+      console.error("Error setting CSRF token:", error);
+    });
+}

@@ -9,6 +9,9 @@ from django.contrib.auth import authenticate
 # Django의 기본 authenticate 함수
 # 우리가 설정한 DefaultAuthBackend인 TokenAuth 방식으로 유저를 인증해줌
 
+from django.contrib.auth import get_user_model
+User = get_user_model()  # 현재 프로젝트의 User 모델을 가져옵니다.
+
 class RegisterSerializer(serializers.ModelSerializer):
 		email = serializers.EmailField(
 						required=True,
@@ -80,3 +83,16 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"error": "Unable to log in with provided credentials."}
             )
+				
+class FollowSerializer(serializers.Serializer):
+    username = serializers.CharField()
+
+    def validate_username(self, value):
+        """
+        입력된 username이 실제로 존재하는지 검증합니다.
+        """
+        try:
+            User.objects.get(username=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User does not exist")
+        return value

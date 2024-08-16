@@ -32,18 +32,19 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+	'users', 
     'corsheaders',
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
 	'rest_framework',
-	'users',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
 	'channels',
+    'django.contrib.admin',
+	'core',
 
 ]
 
@@ -165,3 +166,16 @@ CHANNEL_LAYERS = {
 }
 
 CORS_ALLOW_CREDENTIALS = True
+
+AUTH_USER_MODEL = 'users.User'
+
+CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
+CSRF_COOKIE_SECURE = False # HTTP를 사용하는 경우
+# CSRF_COOKIE_SECURE = True  # HTTPS를 사용하는 경우
+CSRF_USE_SESSIONS = False  # 세션 대신 쿠키 사용
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8080",  # 예시: 프론트엔드가 동작하는 로컬 호스트 주소
+    "https://example.com",    # 예시: 프로덕션 도메인
+    # 다른 허용할 도메인들을 여기에 추가하세요.
+]
