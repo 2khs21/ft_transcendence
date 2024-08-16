@@ -55,9 +55,16 @@ export function initializeChat() {
     let message = messageInputDom.value; // const를 let으로 변경
     const username = localStorage.getItem("username");
 
+    // /befriend 명령어 처리
+    if (message.startsWith("/befriend ")) {
+      const userToFollow = message.split(" ")[1];
+      befriendUser(userToFollow);
+      messageInputDom.value = "";
+      return;
+    }
+
     let to_username = "everyone";
     let whisper = false;
-
     // 귓속말 처리
     if (message.startsWith("/w ")) {
       const parts = message.split(" ");
@@ -103,4 +110,57 @@ function displayMessage(data) {
   }
 
   chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// 친구 추가(팔로우) 함수
+async function befriendUser(userToFollow) {
+  console.log("befriendUser");
+  console.log(getCookie("csrftoken"));
+  console.log(`${localStorage.getItem("accessToken")}`);
+
+  try {
+    const response = await fetch("/api/users/follow/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken"),
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`, // JWT 사용 시
+      },
+      body: JSON.stringify({ username: userToFollow }),
+    });
+
+    const data = await response.json();
+    // 시스템 메시지로 결과 표시
+    displayMessage({
+      message: data.detail,
+      username: "System",
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    displayMessage({
+      message: `An error occurred while trying to follow ${userToFollow}`,
+      username: "System",
+    });
+  }
+}
+
+// CSRF 토큰을 쿠키에서 가져오는 함수
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    console.log("All cookies:", document.cookie); // 모든 쿠키 출력
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      console.log("Checking cookie:", cookie); // 각 쿠키 출력
+      if (cookie.substring(0, name.length + 1) === name + "=") {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  } else {
+    console.log("No cookies found"); // 쿠키가 없는 경우
+  }
+  console.log(`Cookie '${name}' value:`, cookieValue); // 찾은 쿠키 값 출력
+  return cookieValue;
 }
