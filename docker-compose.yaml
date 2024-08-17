@@ -29,7 +29,6 @@ services:
       "
     volumes:
       - ./backend:/code
-      - ./media:/code/media # 미디어 파일을 위한 볼륨 추가
     ports:
       - "8000:8000"
     depends_on:
