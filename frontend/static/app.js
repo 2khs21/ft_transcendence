@@ -54,7 +54,7 @@ function checkAuthAndRedirect() {
     currentPath !== "/login" &&
     currentPath !== "/register"
   ) {
-    console.log("No login");
+    console.log("No login -> Login page");
     navigate("/login", false); // 로그인 상태가 아닌 경우 로그인 페이지로 리다이렉트
     return;
   }
@@ -63,7 +63,7 @@ function checkAuthAndRedirect() {
     authState.isLoggedIn &&
     (currentPath === "/login" || currentPath === "/register")
   ) {
-    console.log("Yes login");
+    console.log("alreay loginned -> Home page");
     navigate("/", false); // 로그인 상태에서 로그인 페이지 또는 회원가입 페이지로 이동 시 홈으로 리다이렉트
     return;
   }
@@ -110,6 +110,8 @@ function logout() {
 document.getElementById("logout-btn").addEventListener("click", logout);
 
 function init() {
+  window.addEventListener("popstate", checkAuthAndRedirect);
+
   checkAuthAndRedirect();
   // 로컬스토리지에서 username 가져오기
   const username = localStorage.getItem("username");
