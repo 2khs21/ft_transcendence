@@ -1,5 +1,5 @@
 // chat.js
-import { authState } from "./app.js";
+import { authState, getCookie } from "./app.js";
 
 export let chatSocket = null; // WebSocket 객체를 전역 변수로 선언
 
@@ -139,25 +139,4 @@ async function befriendUser(userToFollow) {
       username: "System",
     });
   }
-}
-
-// CSRF 토큰을 쿠키에서 가져오는 함수
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== "") {
-    console.log("All cookies:", document.cookie); // 모든 쿠키 출력
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      console.log("Checking cookie:", cookie); // 각 쿠키 출력
-      if (cookie.substring(0, name.length + 1) === name + "=") {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  } else {
-    console.log("No cookies found"); // 쿠키가 없는 경우
-  }
-  console.log(`Cookie '${name}' value:`, cookieValue); // 찾은 쿠키 값 출력
-  return cookieValue;
 }

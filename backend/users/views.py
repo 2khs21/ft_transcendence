@@ -59,3 +59,49 @@ class FollowUserView(APIView):
             return Response({"detail": f"You are now following {username_to_follow}"}, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+###################### profile ######################	
+from rest_framework import generics, permissions
+from .models import User
+from .serializers import UserProfileSerializer
+from .serializers import UserProfileSerializer
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated] # 인증된 사용자만
+
+    def get_object(self):
+        return self.request.user
+
+class OtherUserProfileView(generics.RetrieveAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = User.objects.all()
+    lookup_field = 'username'
+
+
+from rest_framework import status
+from rest_framework.response import Response
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        # 이미지 처리
+        if 'profile_image' in request.FILES:
+            instance.profile_image = request.FILES['profile_image']
+        
+        # 상태 메시지 처리
+        if 'status_message' in request.data:
+            instance.status_message = request.data['status_message']
+        
+        instance.save()
+        
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)

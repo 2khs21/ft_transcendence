@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-c)87kb0oh&wa((m(%wm6@xuno$mg-)1u2#%a&&5bqyw_j8q-8o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -147,6 +147,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -179,3 +180,6 @@ CORS_ALLOWED_ORIGINS = [
     "https://example.com",    # 예시: 프로덕션 도메인
     # 다른 허용할 도메인들을 여기에 추가하세요.
 ]
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

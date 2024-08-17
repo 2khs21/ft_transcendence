@@ -55,20 +55,6 @@ class RegisterSerializer(serializers.ModelSerializer):
 			# 새로 생성된 Token 인스턴스의 user 필드에 user 변수로 전달된 사용자 객체를 할당합니다.
 			return user
 		
-# class LoginSerializer(serializers.Serializer):
-# 		username = serializers.CharField(required=True)
-# 		password = serializers.CharField(required=True, write_only=True)
-# 		# write_only=True : 클라이언트->서버 역직력화는 가능, 서버->클라이언트 방향의 직렬화는 불가능
-		
-# 		def validate(self, data):
-# 			user = authenticate(username=data['username'], password=data['password'])
-# 			if user:
-# 				token = Token.objects.get(user=user) # 토큰에서 유저 찾아 응답
-# 				return token
-# 			else:
-# 				raise serializers.ValidationError(
-# 					{"error":"Unable to log in with provided credentials."}
-# 					)
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
@@ -83,7 +69,8 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"error": "Unable to log in with provided credentials."}
             )
-				
+        
+###################### follow ######################
 class FollowSerializer(serializers.Serializer):
     username = serializers.CharField()
 
@@ -96,3 +83,14 @@ class FollowSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("User does not exist")
         return value
+    
+###################### profile ######################	
+class UserProfileSerializer(serializers.ModelSerializer):
+    profile_image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['username', 'status_message', 'profile_image_url']
+
+    def get_profile_image_url(self, obj):
+        return obj.get_profile_image_url()
