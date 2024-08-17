@@ -14,6 +14,8 @@ fclean:
 	-docker images -q | xargs -r docker rmi
 	-docker volume ls -q | xargs -r docker volume rm
 	-rm -rf data/
+	-find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
+	-find . -path "*/migrations/*.pyc" -delete
 
 migrate:
 	- docker compose run backend python manage.py makemigrations

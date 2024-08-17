@@ -11,7 +11,7 @@ export function renderRegister(container) {
 					<input type="password" id="registerPassword2" placeholder="Confirm Password" required>
 					<button type="submit">Register</button>
 			</form>
-			<p>Already have an account? <a href="/login" data-link>Login</a></p>
+			<p>Already have an account? <a href="/login" id="login-link" data-link>Login</a></p>
 	`;
 
   document
@@ -38,4 +38,8 @@ export function renderRegister(container) {
         alert("Registration failed: " + error.message);
       }
     });
+  document.getElementById("login-link").addEventListener("click", (e) => {
+    e.preventDefault(); // Prevent default anchor behavior
+    navigate("/login");
+  });
 }
