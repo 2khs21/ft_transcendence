@@ -4,24 +4,21 @@ import { authState } from "./app.js";
 export let chatSocket = null; // WebSocket 객체를 전역 변수로 선언
 
 export function initializeChat() {
-  if (document.getElementById("chat-container")) {
-    console.log("Chat already initialized, skipping");
-    return;
+  if (!document.getElementById("chat-container")) {
+    const chatContainer = document.createElement("div");
+    chatContainer.id = "chat-container";
+    chatContainer.innerHTML = `
+    <div id="chat-messages" style="overflow-y: scroll; height: 100px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+    <div id="chat-box"></div> <!-- chat-box 요소 추가 -->
+    </div>
+    <input type="text" id="chat-input" placeholder="Type a message..." style="width: 80%; padding: 5px;">
+    <button id="chat-send" style="width: 18%; padding: 5px;">Send</button>
+    `;
+    document.body.appendChild(chatContainer);
   }
-  const chatContainer = document.createElement("div");
-  chatContainer.id = "chat-container";
-  chatContainer.innerHTML = `
-      <div id="chat-messages" style="overflow-y: scroll; height: 100px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
-          <div id="chat-box"></div> <!-- chat-box 요소 추가 -->
-      </div>
-      <input type="text" id="chat-input" placeholder="Type a message..." style="width: 80%; padding: 5px;">
-      <button id="chat-send" style="width: 18%; padding: 5px;">Send</button>
-  `;
-  document.body.appendChild(chatContainer);
-
   const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
   chatSocket = new WebSocket(
-    `${protocol}${window.location.hostname}:8000/ws/chat/`
+    `${protocol}${window.location.hostname}:8080/ws/chat/`
   );
 
   chatSocket.onopen = function (e) {
