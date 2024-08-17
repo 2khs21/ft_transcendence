@@ -6,6 +6,5 @@
 backend/media/profile_images/*
 !backend/media/profile_images/.gitkeep
 media/
-
 **/migrations/*
 !**/migrations/__init__.py
