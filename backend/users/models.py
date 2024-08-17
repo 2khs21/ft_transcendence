@@ -10,7 +10,7 @@ class User(AbstractUser):
     def get_profile_image_url(self):
         if self.profile_image:
             return self.profile_image.url
-        return 'images/default_image.png'  # 기본 이미지 경로
+        return '/images/default_image.png'  # 기본 이미지 경로
     
     ############### 팔로우 ###############
     following = models.ManyToManyField(
