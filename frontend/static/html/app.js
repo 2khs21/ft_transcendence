@@ -45,7 +45,7 @@ function updateNav() {
   }
 }
 
-function checkAuthAndRedirect() {
+function checkAuthAndRedirect(path = window.location.pathname) {
   authState.isLoggedIn = !!localStorage.getItem("accessToken"); // 'token' 대신 'accessToken' 사용
   const currentPath = window.location.pathname;
 
@@ -107,12 +107,15 @@ function logout() {
 
   navigate("/login"); // 로그아웃 후 로그인 페이지로 이동
 }
+
 document.getElementById("logout-btn").addEventListener("click", logout);
 
 function init() {
   window.addEventListener("popstate", checkAuthAndRedirect);
 
-  checkAuthAndRedirect();
+  const path = window.location.pathname;
+  checkAuthAndRedirect(path);
+  // checkAuthAndRedirect();
   // 로컬스토리지에서 username 가져오기
   const username = localStorage.getItem("username");
   console.log("username");
