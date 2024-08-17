@@ -166,3 +166,23 @@ async function initializeCSRF() {
       console.error("Error setting CSRF token:", error);
     });
 }
+// CSRF 토큰을 쿠키에서 가져오는 함수
+export function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    console.log("All cookies:", document.cookie); // 모든 쿠키 출력
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      console.log("Checking cookie:", cookie); // 각 쿠키 출력
+      if (cookie.substring(0, name.length + 1) === name + "=") {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  } else {
+    console.log("No cookies found"); // 쿠키가 없는 경우
+  }
+  console.log(`Cookie '${name}' value:`, cookieValue); // 찾은 쿠키 값 출력
+  return cookieValue;
+}
