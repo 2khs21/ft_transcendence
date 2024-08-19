@@ -1,8 +1,12 @@
 #users/urls.py
 from django.urls import path
-from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView
+from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView
+from . import views
 
 urlpatterns = [
+		path('', UserListView.as_view(), name='user-list'),
+
+
 		path('register/', RegisterView.as_view(), name='register'),
 		path('login/', LoginView.as_view(), name='login'),
 
@@ -10,4 +14,9 @@ urlpatterns = [
 
 		path('profile/', UserProfileView.as_view(), name='user-profile'),
     path('profile/<str:username>/', OtherUserProfileView.as_view(), name='other-user-profile'),
+
+
+		path('connected/', views.get_connected_users),
+    path('connect/', views.user_connected),
+    path('disconnect/', views.user_disconnected),
 ]

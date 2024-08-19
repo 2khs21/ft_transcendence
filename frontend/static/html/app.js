@@ -7,6 +7,7 @@ import { renderHome } from "./home.js";
 import { renderGame } from "./game.js";
 import { renderProfile } from "./profile.js";
 import { initializeChat, chatSocket } from "./chat.js";
+import { updateUserConnection } from "./func.js"; // 새로 추가
 
 export const authState = {
   isLoggedIn: false,
@@ -71,7 +72,7 @@ function checkAuthAndRedirect(path = window.location.pathname) {
   updateContent(currentPath);
 }
 
-function logout() {
+async function old_logout() {
   // WebSocket 연결 종료
   authState.isLoggedIn = false;
   if (chatSocket !== null) {
@@ -80,6 +81,58 @@ function logout() {
 
   localStorage.removeItem("accessToken"); // 'accessToken' 제거
   localStorage.removeItem("refreshToken"); // 'refreshToken' 제거
+
+  // 화면에서 채팅 기록을 담고 있는 chat-container 요소를 삭제
+  const chatContainer = document.getElementById("chat-container");
+  if (chatContainer) {
+    chatContainer.remove(); // chat-container 요소를 DOM에서 제거
+  }
+
+  // 만약 chat-messages 요소도 별도로 삭제해야 한다면, 아래 코드 사용
+  const chatBox = document.getElementById("chat-messages");
+  if (chatBox) {
+    chatBox.remove(); // chat-messages 요소를 DOM에서 제거
+  }
+
+  // 확인: 요소가 제거되었는지 조건문으로 확인
+  if (
+    !document.getElementById("chat-container") &&
+    !document.getElementById("chat-messages")
+  ) {
+    console.log(
+      "Chat container and chat messages have been successfully removed."
+    );
+  } else {
+    console.error("Failed to remove chat container or chat messages.");
+  }
+
+  console.log("Logging out, updating connection status...");
+  await updateUserConnection(username, false); // 접속 상태 업데이트
+
+  navigate("/login"); // 로그아웃 후 로그인 페이지로 이동
+}
+
+async function logout() {
+  console.log("Logging out, updating connection status...");
+
+  const username = localStorage.getItem("username");
+  if (username) {
+    try {
+      await updateUserConnection(username, false); // 접속 상태 업데이트
+    } catch (error) {
+      console.error("Error updating user connection:", error);
+    }
+  }
+
+  // WebSocket 연결 종료
+  authState.isLoggedIn = false;
+  if (chatSocket !== null) {
+    chatSocket.close();
+  }
+
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("username");
 
   // 화면에서 채팅 기록을 담고 있는 chat-container 요소를 삭제
   const chatContainer = document.getElementById("chat-container");

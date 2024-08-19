@@ -105,3 +105,45 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+    
+
+############### 접속한 유저목록 보기 ###############
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+connected_users = set()  # 접속 중인 유저를 저장할 set
+
+@api_view(['GET'])
+def get_connected_users(request):
+    return Response(list(connected_users))
+
+@api_view(['POST'])
+def user_connected(request):
+    username = request.data.get('username')
+    if username:
+        connected_users.add(username)
+    return Response({"status": "success"})
+
+@api_view(['POST'])
+def user_disconnected(request):
+    username = request.data.get('username')
+    if username and username in connected_users:
+        connected_users.remove(username)
+    return Response({"status": "success"})
+
+
+from .serializers import UserSerializer
+
+########## 전체 유저 ############
+
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        print("Fetching all users...")
+        response = super().list(request, *args, **kwargs)
+        print(f"Total users fetched: {len(response.data)}")
+        return response
