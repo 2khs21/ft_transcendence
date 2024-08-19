@@ -94,3 +94,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_profile_image_url(self, obj):
         return obj.get_profile_image_url()
+    
+
+####### all user list #######
+    
+class UserSerializer(serializers.ModelSerializer):
+	class Meta:
+			model = User
+			fields = '__all__'  # 모든 필드를 포함
+			extra_kwargs = {
+					'password': {'write_only': True},  # 비밀번호는 읽기 불가능하게 설정
+			}

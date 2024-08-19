@@ -3,6 +3,8 @@ import { navigate } from "./app.js";
 import { initializeChat } from "./chat.js";
 // export let isLoggedIn = false;
 import { authState } from "./app.js";
+import { updateUserConnection } from "./func.js";
+import { authenticatedFetch } from "./auth.js";
 
 export function renderLogin(container) {
   container.innerHTML = `
@@ -37,6 +39,8 @@ export function renderLogin(container) {
       localStorage.setItem("refreshToken", data.refresh);
       localStorage.setItem("username", username);
       console.log("Login successful, initializing chat and navigating...");
+      console.log("Login successful, updating connection status...");
+      await updateUserConnection(username, true); // 접속 상태 업데이트
       authState.isLoggedIn = true;
       // initializeChat();
       navigate("/", true, true);
