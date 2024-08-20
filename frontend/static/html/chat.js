@@ -1,6 +1,8 @@
 // chat.js
 import { authState, getCookie } from "./app.js";
 import { manageFriend, manageMute } from "./func.js";
+import { getOtherUserProfile } from "./func.js";
+
 export let chatSocket = null; // WebSocket 객체를 전역 변수로 선언
 
 export function initializeChat() {
@@ -52,7 +54,7 @@ export function initializeChat() {
     let message = messageInputDom.value; // const를 let으로 변경
     const username = localStorage.getItem("username");
 
-    document.querySelector("#chat-send").onclick = function (e) {
+    document.querySelector("#chat-send").onclick = async function (e) {
       const messageInputDom = document.querySelector("#chat-input");
       let message = messageInputDom.value;
       const username = localStorage.getItem("username");
@@ -119,6 +121,27 @@ export function initializeChat() {
           whisper = true;
         }
       }
+      // profile 명령어 처리
+      if (message.startsWith("/profile ")) {
+        const userToView = message.split(" ")[1];
+        const profile = await getOtherUserProfile(userToView);
+        if (profile) {
+          displayUserProfile(profile);
+        } else {
+          displayMessage({
+            message: `Failed to fetch profile for user ${userToView}`,
+            username: "System",
+          });
+        }
+        messageInputDom.value = "";
+        return;
+      }
+      if (message.startsWith("/")) {
+        displayMessage({
+          message: `/w, /befriend, /unfriend, /mute, /unmute, /profile 명령어를 사용할 수 있습니다.`,
+          username: "System",
+        });
+      }
 
       console.log("Sending message:", message);
       console.log("From user:", username);
@@ -173,4 +196,24 @@ function displayMessage(data) {
 
   // 모든 채팅 활동 후 이벤트 발생 home.js에서 이벤트를 수신하여 사용자 목록을 업데이트합니다.
   document.dispatchEvent(new Event("chatActionPerformed"));
+}
+
+// view other profile
+function displayUserProfile(profile) {
+  const profileContainer = document.createElement("div");
+  profileContainer.id = "user-profile-container";
+  profileContainer.innerHTML = `
+    <img src="${
+      profile.profile_image_url
+    }" alt="Profile Image" style="width: 100px; height: 100px;">
+    <p>Username: ${profile.username}</p>
+    <p>Email: ${profile.email}</p>
+    <p>Status: ${profile.status_message || "No status message"}</p>
+    <button id="close-profile">X</button>
+  `;
+  document.body.appendChild(profileContainer);
+
+  document.getElementById("close-profile").addEventListener("click", () => {
+    document.body.removeChild(profileContainer);
+  });
 }
