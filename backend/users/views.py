@@ -194,3 +194,16 @@ class MuteView(APIView):
             except User.DoesNotExist:
                 return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+
+################# record #################
+
+from .models import PongRecord
+from .serializers import PongRecordSerializer
+
+class PongRecordListCreateView(generics.ListCreateAPIView):
+    queryset = PongRecord.objects.all()
+    serializer_class = PongRecordSerializer
+    permission_classes = [permissions.IsAuthenticated]
