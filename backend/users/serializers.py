@@ -96,12 +96,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return obj.get_profile_image_url()
     
 
-####### all user list #######
-    
 class UserSerializer(serializers.ModelSerializer):
-	class Meta:
-			model = User
-			fields = '__all__'  # 모든 필드를 포함
-			extra_kwargs = {
-					'password': {'write_only': True},  # 비밀번호는 읽기 불가능하게 설정
-			}
+    class Meta:
+        model = User
+        exclude = ['password']  # 비밀번호 필드를 제외한 모든 필드
+
+class FriendSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    action = serializers.ChoiceField(choices=['add', 'remove'])
+
+class MuteSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    action = serializers.ChoiceField(choices=['mute', 'unmute'])

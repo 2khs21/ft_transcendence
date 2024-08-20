@@ -47,3 +47,47 @@ class User(AbstractUser):
     def is_following(self, user):
         """주어진 사용자를 팔로우하고 있는지 확인합니다."""
         return self.following.filter(pk=user.pk).exists()
+    
+      # 추가: 뮤트한 사용자 관계 추가
+    muted_users = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        related_name='muted_by',
+        blank=True
+    )
+
+    # 추가: 친구 관계 추가
+    friends = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        related_name='friended_by',
+        blank=True
+    )
+
+    #### mute ####
+    def mute_user(self, user):
+        """주어진 사용자를 뮤트합니다."""
+        if not self.has_muted(user):
+            self.muted_users.add(user)
+
+    def unmute_user(self, user):
+        """주어진 사용자를 언뮤트합니다."""
+        self.muted_users.remove(user)
+
+    def has_muted(self, user):
+        """주어진 사용자를 뮤트했는지 확인합니다."""
+        return self.muted_users.filter(pk=user.pk).exists()
+
+    #### friend ####
+    def add_friend(self, user):
+        """주어진 사용자를 친구로 추가합니다."""
+        if not self.is_friend(user):
+            self.friends.add(user)
+
+    def remove_friend(self, user):
+        """주어진 사용자를 친구에서 제거합니다."""
+        self.friends.remove(user)
+
+    def is_friend(self, user):
+        """주어진 사용자가 친구인지 확인합니다."""
+        return self.friends.filter(pk=user.pk).exists()

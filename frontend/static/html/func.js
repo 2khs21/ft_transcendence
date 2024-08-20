@@ -1,30 +1,6 @@
 // func.js
+import { authenticatedFetch } from "./auth.js";
 
-// 모든 사용자 목록을 가져오는 함수
-export async function getAllUsers() {
-  try {
-    console.log("Fetching all users..."); // 작업 시작 로그
-    const token = localStorage.getItem("accessToken");
-    console.log("Access token:", token); // 토큰 로깅
-    if (!token) {
-      throw new Error("No access token found");
-    }
-    const response = await fetch("/api/users/", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    console.log("All users:", data); // 전체 유저 목록 출력
-    return data;
-  } catch (error) {
-    console.error("Error fetching all users:", error);
-    return null;
-  }
-}
 // 특정 사용자의 상세 정보를 가져오는 함수
 export async function getUserDetails(username) {
   try {
@@ -41,67 +17,14 @@ export async function getUserDetails(username) {
   }
 }
 
-// 사용자 이름이 존재하는지 확인하는 함수
-export async function checkUsernameExists(username) {
-  if (username === localStorage.getItem("username")) {
-    return true;
-  }
-  try {
-    const users = await getAllUsers();
-    if (!users || !Array.isArray(users)) {
-      throw new Error("Invalid user data received");
-    }
-    return users.some((user) => user.username === username);
-  } catch (error) {
-    console.error("Error checking username existence:", error);
-    return false;
-  }
-}
-
-// 뮤트된 사용자 목록을 가져오는 함수
-export async function fetchMutedList() {
-  try {
-    const response = await fetch("/api/users/mute/", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch muted list. Status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching muted list:", error);
-    return null;
-  }
-}
-
-// 특정 사용자가 뮤트되었는지 확인하는 함수
-export async function checkIfUserIsMuted(username) {
-  try {
-    const mutedList = await fetchMutedList();
-    return (
-      mutedList &&
-      mutedList.muted_users &&
-      mutedList.muted_users.includes(username)
-    );
-  } catch (error) {
-    console.error("Error checking muted users:", error);
-    return false;
-  }
-}
-
+// 접속 중인 유저 목록 가져오기
 // 접속 중인 유저 목록 가져오기
 export async function getConnectedUsers() {
   try {
-    console.log("Fetching connected users..."); // 작업 시작 로그
-    const response = await fetch("/api/users/connected/");
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    console.log("Fetching connected users...");
+    const response = await authenticatedFetch("/api/users/connected/");
     const data = await response.json();
-    console.log("Connected users:", data); // 접속 중인 유저 목록 출력
+    console.log("Connected users:", data);
     return data;
   } catch (error) {
     console.error("Error fetching connected users:", error);
@@ -128,5 +51,85 @@ export async function updateUserConnection(username, isConnected) {
     );
   } catch (error) {
     console.error("Error updating user connection:", error);
+  }
+}
+
+//// nuew
+
+// 모든 사용자 목록을 가져오는 함수
+export async function getAllUsers() {
+  try {
+    console.log("Fetching all users...");
+    const response = await authenticatedFetch("/api/users/");
+    const data = await response.json();
+    console.log("All users:", data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    return null;
+  }
+}
+
+// 친구 목록 가져오기
+export async function getFriendsList() {
+  try {
+    const response = await authenticatedFetch("/api/users/friend/");
+    const data = await response.json();
+    console.log("Friends list:", data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching friends list:", error);
+    return null;
+  }
+}
+
+// 차단 목록 가져오기
+export async function getMutedList() {
+  try {
+    const response = await authenticatedFetch("/api/users/mute/");
+    const data = await response.json();
+    console.log("Muted users list:", data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching muted users list:", error);
+    return null;
+  }
+}
+
+// 친구 추가/삭제 함수
+export async function manageFriend(username, action) {
+  try {
+    const response = await authenticatedFetch("/api/users/friend/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, action }),
+    });
+    const data = await response.json();
+    console.log("Friend action result:", data);
+    return data;
+  } catch (error) {
+    console.error("Error in friend action:", error);
+    return null;
+  }
+}
+
+// 사용자 차단/차단해제 함수
+export async function manageMute(username, action) {
+  try {
+    const response = await authenticatedFetch("/api/users/mute/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, action }),
+    });
+    const data = await response.json();
+    console.log("Mute action result:", data);
+    return data;
+  } catch (error) {
+    console.error("Error in mute action:", error);
+    return null;
   }
 }

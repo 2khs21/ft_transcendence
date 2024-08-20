@@ -3,7 +3,7 @@
 // 페이지 렌더링 함수들을 가져옵니다.
 import { renderLogin } from "./login.js";
 import { renderRegister } from "./register.js";
-import { renderHome } from "./home.js";
+import { renderHome, cleanupHome } from "./home.js";
 import { renderGame } from "./game.js";
 import { renderProfile } from "./profile.js";
 import { initializeChat, chatSocket } from "./chat.js";
@@ -32,6 +32,10 @@ export function navigate(path, pushState = true) {
 }
 
 function updateContent(path) {
+  if (path !== "/") {
+    cleanupHome(); // Clean up home page when navigating away
+  }
+
   const renderFunction = routes[path] || routes["/"];
   app.innerHTML = "";
   renderFunction(app);
