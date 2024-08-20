@@ -133,17 +133,64 @@ def user_disconnected(request):
     return Response({"status": "success"})
 
 
-from .serializers import UserSerializer
 
-########## 전체 유저 ############
-
+#### friend, mute ####
+from .serializers import UserSerializer, FriendSerializer, MuteSerializer
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
-    def list(self, request, *args, **kwargs):
-        print("Fetching all users...")
-        response = super().list(request, *args, **kwargs)
-        print(f"Total users fetched: {len(response.data)}")
-        return response
+class FriendView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        friends = request.user.friends.all()
+        serializer = UserSerializer(friends, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = FriendSerializer(data=request.data)
+        if serializer.is_valid():
+            username = serializer.validated_data['username']
+            action = serializer.validated_data['action']
+            try:
+                user_to_manage = User.objects.get(username=username)
+                if action == 'add':
+                    request.user.add_friend(user_to_manage)
+                    return Response({"detail": f"User {username} has been added as a friend"})
+                elif action == 'remove':
+                    request.user.remove_friend(user_to_manage)
+                    return Response({"detail": f"User {username} has been removed from friends"})
+                else:
+                    return Response({"detail": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
+            except User.DoesNotExist:
+                return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class MuteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        muted_users = request.user.muted_users.all()
+        serializer = UserSerializer(muted_users, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = MuteSerializer(data=request.data)
+        if serializer.is_valid():
+            username = serializer.validated_data['username']
+            action = serializer.validated_data['action']
+            try:
+                user_to_manage = User.objects.get(username=username)
+                if action == 'mute':
+                    request.user.mute_user(user_to_manage)
+                    return Response({"detail": f"User {username} has been muted"})
+                elif action == 'unmute':
+                    request.user.unmute_user(user_to_manage)
+                    return Response({"detail": f"User {username} has been unmuted"})
+                else:
+                    return Response({"detail": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
+            except User.DoesNotExist:
+                return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
