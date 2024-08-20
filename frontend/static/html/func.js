@@ -133,3 +133,19 @@ export async function manageMute(username, action) {
     return null;
   }
 }
+
+// 다른 유저의 프로필 정보 가져오기
+export async function getOtherUserProfile(username) {
+  try {
+    console.log(`Fetching profile for user ${username}...`);
+    const response = await authenticatedFetch(
+      `/api/users/profile/${username}/`
+    );
+    const data = await response.json();
+    console.log("User profile:", data);
+    return data;
+  } catch (error) {
+    console.error(`Error fetching profile for user ${username}:`, error);
+    return null;
+  }
+}
