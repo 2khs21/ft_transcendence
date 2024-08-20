@@ -1,6 +1,6 @@
 #users/urls.py
 from django.urls import path
-from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView, FriendView, MuteView
+from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView, FriendView, MuteView, PongRecordListCreateView
 from . import views
 
 urlpatterns = [
@@ -20,4 +20,6 @@ urlpatterns = [
 		path('connected/', views.get_connected_users),
     path('connect/', views.user_connected),
     path('disconnect/', views.user_disconnected),
+		path('pong-record/', PongRecordListCreateView.as_view(), name='pong-record-list-create'),
+
 ]

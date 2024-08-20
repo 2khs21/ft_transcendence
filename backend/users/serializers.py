@@ -108,3 +108,34 @@ class FriendSerializer(serializers.Serializer):
 class MuteSerializer(serializers.Serializer):
     username = serializers.CharField()
     action = serializers.ChoiceField(choices=['mute', 'unmute'])
+
+
+
+################# record #################
+    
+from .models import PongRecord
+
+class PongRecordSerializer(serializers.ModelSerializer):
+    winner_username = serializers.ReadOnlyField(source='winner.username')
+    loser_username = serializers.ReadOnlyField(source='loser.username')
+
+    class Meta:
+        model = PongRecord
+        fields = ['id', 'winner_username', 'loser_username', 'winner_score', 'loser_score', 'end_time']
+
+    def create(self, validated_data):
+        # 승자와 패자의 username을 이용해 User 인스턴스를 가져옵니다.
+        winner_username = self.initial_data.get('winner_username')
+        loser_username = self.initial_data.get('loser_username')
+        
+        winner = User.objects.get(username=winner_username)
+        loser = User.objects.get(username=loser_username)
+
+        # PongRecord 인스턴스를 생성하고 저장합니다.
+        pong_record = PongRecord.objects.create(
+            winner=winner,
+            loser=loser,
+            winner_score=validated_data['winner_score'],
+            loser_score=validated_data['loser_score']
+        )
+        return pong_record

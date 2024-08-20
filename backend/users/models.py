@@ -91,3 +91,24 @@ class User(AbstractUser):
     def is_friend(self, user):
         """주어진 사용자가 친구인지 확인합니다."""
         return self.friends.filter(pk=user.pk).exists()
+    
+
+################ record ################
+
+class PongRecord(models.Model):
+    # 승자와 패자를 User 모델과 연결합니다.
+    winner = models.ForeignKey(User, related_name='won_games', on_delete=models.CASCADE)
+    loser = models.ForeignKey(User, related_name='lost_games', on_delete=models.CASCADE)
+    
+    # 점수를 저장합니다.
+    winner_score = models.IntegerField()
+    loser_score = models.IntegerField()
+    
+    # 게임이 끝난 시간을 자동으로 저장합니다.
+    end_time = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.winner.username} vs {self.loser.username} - {self.end_time}"
+
+    class Meta:
+        ordering = ['-end_time']  # 최신 기록이 먼저 오도록 정렬합니다.
