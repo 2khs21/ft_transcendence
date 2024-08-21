@@ -8,3 +8,5 @@ backend/media/profile_images/*
 media/
 **/migrations/*
 !**/migrations/__init__.py
+*.out
+Win32_2d_plotter
