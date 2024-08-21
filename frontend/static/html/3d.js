@@ -1,3 +1,4 @@
+
 import * as THREE from 'three';
 // import WebGL from 'three/addons/capabilities/WebGL.js';
 // import { RoundedBoxGeometry } from 'three/examples/jsm/Addons.js';
@@ -13,6 +14,8 @@ import { TextGeometry } from 'TextGeometry';
 
 import { authState } from "./app.js";
 
+export let gameSocket = null; // WebSocket 객체를 전역 변수로 선언
+
 // official board size
 const boardWidth = 300;
 const boardHeight = 400;
@@ -23,26 +26,43 @@ const ballRadius = 10;
 const paddleSpeed = 1.0;
 const udpPort = 9981;
 
-const socket = new WebSocket('ws://' + window.location.host + '/ws/game/');
-username = localStorage.getItem("username");
+export function renderGame() {
+    init();
+}
+export function removeGame() {
+    const app = document.getElementById('app');
+    while (app.firstChild) {
+        app.removeChild(app.firstChild);
+    }
+}
+
+
+const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+
+gameSocket = new WebSocket(
+    // TODO : ws to wss
+    `${protocol}${window.location.hostname}/ws/game/`
+);
+
+var username = localStorage.getItem("username");
 
 // get every message from the server
-socket.onmessage = function(event) {
-    
+gameSocket.onmessage = function (event) {
+    console.log("getting message from server");
 };
 
-socket.binaryType = 'arraybuffer';
+gameSocket.binaryType = 'arraybuffer';
 
 
-socket.onopen = function (event) {
-    console.log("Connected to Websocket Game Server");   
+gameSocket.onopen = function (event) {
+    console.log("Connected to Websocket Game Server");
 };
 
-socket.onclose = function () {
+gameSocket.onclose = function () {
     console.log("Game Websocket closed, Disconnected from Game Server");
 };
 
-socket.onerror = function (error) {
+gameSocket.onerror = function (error) {
     if (authState.isLoggedIn == true) {
         console.error("Game socket closed unexpectedly reason : " + error);
         setTimeout(() => createGameSession(), 5000);
@@ -57,7 +77,7 @@ function createGameSession(roomName) {
         type: create_game_session,
         room_name: roomName
     };
-    socket.send(JSON.stringify(message));
+    gameSocket.send(JSON.stringify(message));
 }
 
 function startGameRound(roomNmae) {
@@ -65,85 +85,88 @@ function startGameRound(roomNmae) {
         type: start_game_round,
         room_name: roomName
     };
-    socket.send(JSON.stringify(message));
+    gameSocket.send(JSON.stringify(message));
 }
 
 
 /* --------------------- game logic starts --------------------- */
 
-if (WebGL.isWebGLAvailable()) {
 
-    // 씬 만들기
-    const scene = new THREE.Scene();
-    const gui = new GUI();
+// 씬 만들기
+export function init() {
 
-    // 카메라 만들기 (FoV, aspect ratio, near clipping plane, far clipping plane );
-    // window.innerWidth / window.innerHeight 은 화면의 비율 (aspect ratio)
-    // near clipping plane 아래와 far clipping plane 밖은 렌더되지 않음.
-    const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 5000);
-    camera.position.set(0, -250, 150);
-    // camera.position.set(0, -50, 100);
-    camera.lookAt(0, 70, -50);
+    if (WebGL.isWebGLAvailable()) {
+        const scene = new THREE.Scene();
+        const gui = new GUI();
 
-    // 렌더러 만들기, 브라우저 윈도우만큼 사이즈를 지정해 주었는데 다른 경우도 가능할 듯?
-    // window.innerWidth/2 and window.innerHeight/2 라고 한다.
-    const renderer = new THREE.WebGLRenderer({
-        antialias: true,
-    });
-    // 세 번째 인자로 false를 주면 더 작은 레솔루션으로 렌더 가능 (최적화?)
-    // renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
-    // renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setPixelRatio( window.devicePixelRatio , 2);
+        // 카메라 만들기 (FoV, aspect ratio, near clipping plane, far clipping plane );
+        // window.innerWidth / window.innerHeight 은 화면의 비율 (aspect ratio)
+        // near clipping plane 아래와 far clipping plane 밖은 렌더되지 않음.
+        const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 5000);
+        camera.position.set(0, -250, 150);
+        // camera.position.set(0, -50, 100);
+        camera.lookAt(0, 70, -50);
 
-    // main loop 인 듯? 몰루?
-    renderer.setAnimationLoop(animate);
+        // 렌더러 만들기, 브라우저 윈도우만큼 사이즈를 지정해 주었는데 다른 경우도 가능할 듯?
+        // window.innerWidth/2 and window.innerHeight/2 라고 한다.
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+        });
 
-    // 그림자 on
-    renderer.shadowMap.enabled = true;
+        // 세 번째 인자로 false를 주면 더 작은 레솔루션으로 렌더 가능 (최적화?)
+        // renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
+        // renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(window.devicePixelRatio, 2);
 
-    // HTML 문서에 canvas element를 추가해서 우리가 볼 수 있게 만든다
-    document.body.appendChild(renderer.domElement);
+        // main loop 인 듯? 몰루?
+        renderer.setAnimationLoop(animate);
 
-    const ambientLightColor = 0x404040;
-    const ambientLightIntensity = 10;
-    const ambientLight = new THREE.AmbientLight(ambientLightColor, ambientLightIntensity);
-    scene.add(ambientLight);
+        // 그림자 on
+        renderer.shadowMap.enabled = true;
 
-    const directionalLightColor = 0xFFFFFF;
-    const directionalLightIntensity = 20;
-    const directionalLight = new THREE.DirectionalLight(directionalLightColor, directionalLightIntensity);
-    directionalLight.position.set(0, -200, 200);
-    directionalLight.target.position.set(0, -boardHeight / 2, 0);
-    directionalLight.castShadow = true;
-    scene.add(directionalLight);
-    scene.add(directionalLight.target);
+        if (document.getElementById('app').children.length == 0)
+            document.getElementById('app').appendChild(renderer.domElement);
 
-    const pointLightColor = 0xFFFFFF;
-    const pointLightIntensity = 100000;
-    const pointLight = new THREE.PointLight(pointLightColor, pointLightIntensity, 0, 2);
-    pointLight.position.set(0, 0, 100);
-    pointLight.castShadow = true;
-    scene.add(pointLight);
+        const ambientLightColor = 0x404040;
+        const ambientLightIntensity = 10;
+        const ambientLight = new THREE.AmbientLight(ambientLightColor, ambientLightIntensity);
+        scene.add(ambientLight);
 
-    // const spotLightColor = 0xFFFFFF;
-    // const spotLightIntensity = 100000;
-    // const spotLight = new THREE.SpotLight(spotLightColor, spotLightIntensity);
-    // spotLight.position.set(0, 0, 200);
-    // spotLight.castShadow = true;
-    // spotLight.shadow.mapSize.width = 256;
-    // spotLight.shadow.mapSize.height = 256;
-    // spotLight.shadow.camera.near = 0;
-    // spotLight.shadow.camera.far = 4000;
-    // spotLight.shadow.camera.fov = 30;
+        const directionalLightColor = 0xFFFFFF;
+        const directionalLightIntensity = 20;
+        const directionalLight = new THREE.DirectionalLight(directionalLightColor, directionalLightIntensity);
+        directionalLight.position.set(0, -200, 200);
+        directionalLight.target.position.set(0, -boardHeight / 2, 0);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+        scene.add(directionalLight.target);
+
+        const pointLightColor = 0xFFFFFF;
+        const pointLightIntensity = 100000;
+        const pointLight = new THREE.PointLight(pointLightColor, pointLightIntensity, 0, 2);
+        pointLight.position.set(0, 0, 100);
+        pointLight.castShadow = true;
+        scene.add(pointLight);
+
+        // const spotLightColor = 0xFFFFFF;
+        // const spotLightIntensity = 100000;
+        // const spotLight = new THREE.SpotLight(spotLightColor, spotLightIntensity);
+        // spotLight.position.set(0, 0, 200);
+        // spotLight.castShadow = true;
+        // spotLight.shadow.mapSize.width = 256;
+        // spotLight.shadow.mapSize.height = 256;
+        // spotLight.shadow.camera.near = 0;
+        // spotLight.shadow.camera.far = 4000;
+        // spotLight.shadow.camera.fov = 30;
 
 
-    const vertexShader = `
+        const vertexShader = `
         void main() {
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
       `;
 
-    const fragmentShader = `
+        const fragmentShader = `
     //   // Created by inigo quilez - iq/2013 : https://www.shadertoy.com/view/4dl3zn
     //   // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
     //   // Messed up by Weyland
@@ -237,240 +260,366 @@ void main()
 }
       `;
 
-    const backgroundShader = new THREE.ShaderMaterial({
-        uniforms: {
-            iTime: {
-                type: 'f',
-                value: 0.0,
+        const backgroundShader = new THREE.ShaderMaterial({
+            uniforms: {
+                iTime: {
+                    type: 'f',
+                    value: 0.0,
+                },
+                iResolution: {
+                    type: THREE.Vector2,
+                    value: [window.innerWidth / 1.5, window.innerHeight / 1.5],
+                },
+                iMouse: {
+                    type: THREE.Vector2,
+                    value: [0.0, 0.0],
+                }
             },
-            iResolution: {
-                type: THREE.Vector2,
-                value: [window.innerWidth / 1.5, window.innerHeight / 1.5],
-            },
-            iMouse: {
-                type: THREE.Vector2,
-                value: [0.0, 0.0],
-            }
-        },
-        vertexShader,
-        fragmentShader,
-        side: THREE.BackSide,
-    });
-    const skyGeo = new THREE.SphereGeometry(4000, 32, 15);
-    // const skyMat = new THREE.ShaderMaterial({
-    //     uniforms: uniforms,
-    //     vertexShader: vertexShader,
-    //     fragmentShader: fragmentShader,
-    //     side: THREE.BackSide
-    // });
+            vertexShader,
+            fragmentShader,
+            side: THREE.BackSide,
+        });
+        const skyGeo = new THREE.SphereGeometry(4000, 32, 15);
+        // const skyMat = new THREE.ShaderMaterial({
+        //     uniforms: uniforms,
+        //     vertexShader: vertexShader,
+        //     fragmentShader: fragmentShader,
+        //     side: THREE.BackSide
+        // });
 
-    const sky = new THREE.Mesh(skyGeo, backgroundShader);
-    scene.add(sky);
+        const sky = new THREE.Mesh(skyGeo, backgroundShader);
+        scene.add(sky);
 
-    // scene.overrideMaterial = backgroundShader;
+        // scene.overrideMaterial = backgroundShader;
 
-    const boardGeometry = new THREE.BoxGeometry(boardWidth, boardHeight + 20, 100);
-    // const planeMaterial = backgroundShader;
-    const boardMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0xB38FF0,
-        side: THREE.FrontSide,
-        transparent: false,
-        opacity: 1,
-        transmission: 0.3,
-        thickness: 0.3,
-        // reflectivity: 0.4,
-        metalness: 1,
-        roughness: 0.15,
-        flatShading: true,
-    });
+        const boardGeometry = new THREE.BoxGeometry(boardWidth, boardHeight + 20, 100);
+        // const planeMaterial = backgroundShader;
+        const boardMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xB38FF0,
+            side: THREE.FrontSide,
+            transparent: false,
+            opacity: 1,
+            transmission: 0.3,
+            thickness: 0.3,
+            // reflectivity: 0.4,
+            metalness: 1,
+            roughness: 0.15,
+            flatShading: true,
+        });
 
-    const board = new THREE.Mesh(boardGeometry, boardMaterial);
-    board.position.set(0, 0, -50);
-    board.receiveShadow = true;
-    scene.add(board);
-    // board.scale.setX = 828;
-    // board.scale.setY = 525;
+        const board = new THREE.Mesh(boardGeometry, boardMaterial);
+        board.position.set(0, 0, -50);
+        board.receiveShadow = true;
+        scene.add(board);
+        // board.scale.setX = 828;
+        // board.scale.setY = 525;
 
-    // 2.5 0.2 0.5
-    const playerPaddleSizeX = boardWidth / 8;
-    const playerPaddleSizeY = 5;
-    const playerPaddleSizeZ = 10;
+        // 2.5 0.2 0.5
+        const playerPaddleSizeX = boardWidth / 8;
+        const playerPaddleSizeY = 5;
+        const playerPaddleSizeZ = 10;
 
-    const enemyPaddleGeometry = new RoundedBoxGeometry(playerPaddleSizeX, playerPaddleSizeY, playerPaddleSizeZ, 20, 20);
-    // 컬러를 칠해 줄 메테리얼이 필요
-    const enemyPaddleMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0xFE1E50,
-        transparent: true,
-        opacity: 0.9,
-        transmission: 0.5,
-        thickness: 1,
-        reflectivity: 1.0,
-        metalness: 1.0,
-        roughness: 0.00,
-    });
+        const enemyPaddleGeometry = new RoundedBoxGeometry(playerPaddleSizeX, playerPaddleSizeY, playerPaddleSizeZ, 20, 20);
+        // 컬러를 칠해 줄 메테리얼이 필요
+        const enemyPaddleMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xFE1E50,
+            transparent: true,
+            opacity: 0.9,
+            transmission: 0.5,
+            thickness: 1,
+            reflectivity: 1.0,
+            metalness: 1.0,
+            roughness: 0.00,
+        });
 
-    // Mesh가 필요
-    const enemyPaddle = new THREE.Mesh(enemyPaddleGeometry, enemyPaddleMaterial);
-    enemyPaddle.castShadow = true;
-    enemyPaddle.position.set(0, boardHeight / 2, playerPaddleSizeZ / 2);
+        // Mesh가 필요
+        const enemyPaddle = new THREE.Mesh(enemyPaddleGeometry, enemyPaddleMaterial);
+        enemyPaddle.castShadow = true;
+        enemyPaddle.position.set(0, boardHeight / 2, playerPaddleSizeZ / 2);
 
-    const myPaddleGeometry = new RoundedBoxGeometry(playerPaddleSizeX, playerPaddleSizeY, playerPaddleSizeZ, 20, 20);
-    const myPaddleMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0x90E0EF,
-        transparent: true,
-        opacity: 0.9,
-        transmission: 0.5,
-        thickness: 1,
-        reflectivity: 1.0,
-        metalness: 1.0,
-        roughness: 0.00,
+        const myPaddleGeometry = new RoundedBoxGeometry(playerPaddleSizeX, playerPaddleSizeY, playerPaddleSizeZ, 20, 20);
+        const myPaddleMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x90E0EF,
+            transparent: true,
+            opacity: 0.9,
+            transmission: 0.5,
+            thickness: 1,
+            reflectivity: 1.0,
+            metalness: 1.0,
+            roughness: 0.00,
 
-    });
+        });
 
-    const myPaddle = new THREE.Mesh(myPaddleGeometry, myPaddleMaterial);
-    myPaddle.position.set(0, -boardHeight / 2, playerPaddleSizeZ / 2);
-    myPaddle.castShadow = true;
+        const myPaddle = new THREE.Mesh(myPaddleGeometry, myPaddleMaterial);
+        myPaddle.position.set(0, -boardHeight / 2, playerPaddleSizeZ / 2);
+        myPaddle.castShadow = true;
 
-    // 0, 0, 0에 add됨
-    scene.add(myPaddle);
-    scene.add(enemyPaddle);
+        // 0, 0, 0에 add됨
+        scene.add(myPaddle);
+        scene.add(enemyPaddle);
 
-    // board 상하좌우 bars
-    const verticalBarGeometry = new RoundedBoxGeometry(25, boardHeight + 20, 100, 20, 20);
-    const barMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0xB38FF0,
-        transparent: true,
-        opacity: 1.0,
-        transmission: 0.5,
-        thickness: 1,
-        reflectivity: 0.5,
-        metalness: 1.0,
-        roughness: 0.1,
-    });
-    // const horizontalBarGeometry = new RoundedBoxGeometry(boardWidth / 4 - 10, 10, playerPaddleSizeZ, 20, 20);
-    const westBar = new THREE.Mesh(verticalBarGeometry, barMaterial);
-    const eastBar = new THREE.Mesh(verticalBarGeometry, barMaterial);
-    // const leftNorthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
-    // const rightNorthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
-    // const leftSouthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
-    // const rightSouthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
+        // board 상하좌우 bars
+        const verticalBarGeometry = new RoundedBoxGeometry(25, boardHeight + 20, 100, 20, 20);
+        const barMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xB38FF0,
+            transparent: true,
+            opacity: 1.0,
+            transmission: 0.5,
+            thickness: 1,
+            reflectivity: 0.5,
+            metalness: 1.0,
+            roughness: 0.1,
+        });
+        // const horizontalBarGeometry = new RoundedBoxGeometry(boardWidth / 4 - 10, 10, playerPaddleSizeZ, 20, 20);
+        const westBar = new THREE.Mesh(verticalBarGeometry, barMaterial);
+        const eastBar = new THREE.Mesh(verticalBarGeometry, barMaterial);
+        // const leftNorthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
+        // const rightNorthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
+        // const leftSouthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
+        // const rightSouthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
 
 
-    westBar.position.set(-boardWidth / 2 - 12.5, 0, -40);
-    eastBar.position.set(boardWidth / 2 + 12.5, 0, -40);
-    // // (boardWidth / 2) - (boardWidth / 4 - 10) == boardWidth / 4 - 10;
-    // leftNorthBar.position.set(-(boardWidth / 4 + 55), boardHeight / 2 + playerPaddleSizeY / 2, playerPaddleSizeZ);
-    // rightNorthBar.position.set(boardWidth / 4 + 55, boardHeight / 2 + playerPaddleSizeY / 2, playerPaddleSizeZ);
-    // leftSouthBar.position.set(-(boardWidth/ 4 + 55), -boardHeight / 2 - playerPaddleSizeY, playerPaddleSizeZ);
-    // rightSouthBar.position.set(boardWidth / 4 + 55, -boardHeight / 2 - playerPaddleSizeY, playerPaddleSizeZ);
+        westBar.position.set(-boardWidth / 2 - 12.5, 0, -40);
+        eastBar.position.set(boardWidth / 2 + 12.5, 0, -40);
+        // // (boardWidth / 2) - (boardWidth / 4 - 10) == boardWidth / 4 - 10;
+        // leftNorthBar.position.set(-(boardWidth / 4 + 55), boardHeight / 2 + playerPaddleSizeY / 2, playerPaddleSizeZ);
+        // rightNorthBar.position.set(boardWidth / 4 + 55, boardHeight / 2 + playerPaddleSizeY / 2, playerPaddleSizeZ);
+        // leftSouthBar.position.set(-(boardWidth/ 4 + 55), -boardHeight / 2 - playerPaddleSizeY, playerPaddleSizeZ);
+        // rightSouthBar.position.set(boardWidth / 4 + 55, -boardHeight / 2 - playerPaddleSizeY, playerPaddleSizeZ);
 
-    scene.add(westBar);
-    scene.add(eastBar);
-    // scene.add(leftNorthBar);
-    // scene.add(rightNorthBar);
-    // scene.add(leftSouthBar);
-    // scene.add(rightSouthBar);
+        scene.add(westBar);
+        scene.add(eastBar);
+        // scene.add(leftNorthBar);
+        // scene.add(rightNorthBar);
+        // scene.add(leftSouthBar);
+        // scene.add(rightSouthBar);
 
-    const ballGeometry = new THREE.SphereGeometry(ballRadius);
-    const ballMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0xB38FF0,
-        transparent: true,
-        opacity: 1.0,
-        transmission: 0.5,
-        thickness: 1,
-        reflectivity: 1.0,
-        metalness: 1.0,
-        roughness: 0.1,
-    });
-    const ball = new THREE.Mesh(ballGeometry, ballMaterial);
-    ball.castShadow = true;
-    ball.position.set(0, 0, ballRadius / 2);
-    scene.add(ball);
-    // spotLight.target = ball;
-    // scene.add( spotLight );
+        const ballGeometry = new THREE.SphereGeometry(ballRadius);
+        const ballMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xB38FF0,
+            transparent: true,
+            opacity: 1.0,
+            transmission: 0.5,
+            thickness: 1,
+            reflectivity: 1.0,
+            metalness: 1.0,
+            roughness: 0.1,
+        });
+        const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+        ball.castShadow = true;
+        ball.position.set(0, 0, ballRadius / 2);
+        scene.add(ball);
+        // spotLight.target = ball;
+        // scene.add( spotLight );
+
+        // for score
+        const fontLoader = new FontLoader();
 
 
-    // gui용
-    const options = {
-        DirectionalLightPositionX: 0,
-        DirectionalLightPositionY: -100,
-        DirectionalLightPositionZ: 100,
-        BallPositionX: 0,
-        BallPositionY: 0,
+        // transparent white start screen
+        const startScreenGeometry = new THREE.BoxGeometry(boardWidth, boardHeight, 100);
+        const startScreenMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xFFFFFF,
+            transparent: true,
+            opacity: 0.5,
+            transmission: 0.5,
+            thickness: 1,
+            reflectivity: 1.0,
+            metalness: 1.0,
+            roughness: 0.1,
+        });
+        const startScreen = new THREE.Mesh(startScreenGeometry, startScreenMaterial);
+        startScreen.position.set(0, 0, 50);
+        scene.add(startScreen);
 
-        // boardWidth: 828,
-        // boardHeight: 525,
-    };
+        // dual mode button for start screen
+        const dualModeGeometry = new THREE.BoxGeometry(50, 50, 10);
 
-    gui.add(options, "DirectionalLightPositionX", 0, 1000, 1).onChange((val) => {
-        directionalLight.position.setX(val);
-    });
-    gui.add(options, "DirectionalLightPositionY", -5000, 5000, 1).onChange((val) => {
-        directionalLight.position.setY(val);
-    });
-    gui.add(options, "DirectionalLightPositionZ", 0, 5000, 1).onChange((val) => {
-        directionalLight.position.setZ(val);
-    });
-    gui.add(options, "BallPositionX", -boardWidth / 2, boardWidth / 2, 1).onChange((val) => {
-        ball.position.setX(val);
-    });
-    gui.add(options, "BallPositionY", -boardHeight / 2, boardHeight / 2, 1).onChange((val) => {
-        ball.position.setY(val);
-    });
-    // gui.add(options, "boardHeight", 0, 2, 0.1).onChange((val) => {
-    //     board.scale.setY(val);
-    // });
+        const dualModeMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: 1.0,
+            transmission: 0.5,
+            thickness: 1,
+            reflectivity: 1.0,
+            metalness: 1.0,
+            roughness: 0.1,
+        });
 
-    document.onkeydown = function (e) {
-        handleKeyInput(e.key, 1);
-    }
+        const dualModeButton = new THREE.Mesh(dualModeGeometry, dualModeMaterial);
+        dualModeButton.position.set(0, 0, 50);
+        scene.add(dualModeButton);
 
-    document.onkeyup = function (e) {
-        handleKeyInput(e.key, 2);
-    }
+        // tournament mode button for start screen
+        const tournamentModeGeometry = new THREE.BoxGeometry(50, 50, 10);
 
-    function handleKeyInput(key, inputType) {
-        const queryID = 301;
-        const sessionID = 1;  // This should be the actual session ID
-        const playerID = 1;   // 1 for Player A, 2 for Player B
-        let inputKey;
-    
-        switch (key) {
-            case "ArrowLeft":
-                inputKey = 1;
-                break;
-            case "ArrowRight":
-                inputKey = 2;
-                break;
-            default:
-                inputKey = 0;
+        const tournamentModeMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: 1.0,
+            transmission: 0.5,
+            thickness: 1,
+            reflectivity: 1.0,
+            metalness: 1.0,
+            roughness: 0.1,
+        });
+
+        const tournamentModeButton = new THREE.Mesh(tournamentModeGeometry, tournamentModeMaterial);
+        tournamentModeButton.position.set(0, 0, 50);
+        scene.add(tournamentModeButton);
+
+        // dual text for dual mode button
+        const dualTextGeometry = new TextGeometry("DUAL", {
+            font: fontLoader.load('fonts/helvetiker_regular.typeface.json'),
+            size: 10,
+            height: 5,
+            curveSegments: 12,
+            bevelEnabled: true,
+            bevelThickness: 1,
+            bevelSize: 0.5,
+            bevelSegments: 3,
+        });
+
+        const dualTextMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xFFFFFF,
+            transparent: true,
+            opacity: 1.0,
+            transmission: 0.5,
+            thickness: 1,
+            reflectivity: 1.0,
+            metalness: 1.0,
+            roughness: 0.1,
+        });
+
+        const dualText = new THREE.Mesh(dualTextGeometry, dualTextMaterial);
+        dualText.position.set(0, 0, 50);
+        scene.add(dualText);
+
+        // tournament text for tournament mode button
+        const tournamentTextGeometry = new TextGeometry("TOURNAMENT", {
+            font: fontLoader.load('fonts/helvetiker_regular.typeface.json'),
+            size: 10,
+            height: 5,
+            curveSegments: 12,
+            bevelEnabled: true,
+            bevelThickness: 1,
+            bevelSize: 0.5,
+            bevelSegments: 3,
+        });
+
+        const tournamentTextMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xFFFFFF,
+            transparent: true,
+            opacity: 1.0,
+            transmission: 0.5,
+            thickness: 1,
+            reflectivity: 1.0,
+            metalness: 1.0,
+            roughness: 0.1,
+        });
+
+        const tournamentText = new THREE.Mesh(tournamentTextGeometry, tournamentTextMaterial);
+        tournamentText.position.set(0, 0, 50);
+        scene.add(tournamentText);
+
+
+
+        // gui용
+        // const options = {
+        //     DirectionalLightPositionX: 0,
+        //     DirectionalLightPositionY: -100,
+        //     DirectionalLightPositionZ: 100,
+        //     BallPositionX: 0,
+        //     BallPositionY: 0,
+
+        //     // boardWidth: 828,
+        //     // boardHeight: 525,
+        // };
+
+        // gui.add(options, "DirectionalLightPositionX", 0, 1000, 1).onChange((val) => {
+        //     directionalLight.position.setX(val);
+        // });
+        // gui.add(options, "DirectionalLightPositionY", -5000, 5000, 1).onChange((val) => {
+        //     directionalLight.position.setY(val);
+        // });
+        // gui.add(options, "DirectionalLightPositionZ", 0, 5000, 1).onChange((val) => {
+        //     directionalLight.position.setZ(val);
+        // });
+        // gui.add(options, "BallPositionX", -boardWidth / 2, boardWidth / 2, 1).onChange((val) => {
+        //     ball.position.setX(val);
+        // });
+        // gui.add(options, "BallPositionY", -boardHeight / 2, boardHeight / 2, 1).onChange((val) => {
+        //     ball.position.setY(val);
+        // });
+        // gui.add(options, "boardHeight", 0, 2, 0.1).onChange((val) => {
+        //     board.scale.setY(val);
+        // });
+
+        window.addEventListener('resize', onWindowResize);
+
+        function animate() {
+            // const newResolution = new THREE.Vector2(
+            //     window.innerWidth / 1.5,
+            //     window.innerHeight / 1.5
+            //   );
+            //   material.uniforms.iResolution.value.copy(newResolution);
+            backgroundShader.uniforms.iTime.value += 0.0125;
+            renderer.render(scene, camera);
         }
-    
-        const message = {
-            query_id: queryID,
-            session_id: sessionID,
-            player_id: playerID,
-            input_key: inputKey,
-            input_type: inputType
-        };
-        if (socket.readyState === WebSocket.OPEN)
-            socket.send(JSON.stringify(message));
+
+    } else {
+
+        const warning = WebGL.getWebGLErrorMessage();
+        document.getElementById('app').appendChild(warning);
+
+    }
+}
+
+document.onkeydown = function (e) {
+    handleKeyInput(e.key, 1);
+}
+
+document.onkeyup = function (e) {
+    handleKeyInput(e.key, 2);
+}
+
+function handleKeyInput(key, inputType) {
+    const queryID = 301;
+    const sessionID = 1;  // This should be the actual session ID
+    const playerID = 1;   // 1 for Player A, 2 for Player B
+    let inputKey;
+
+    switch (key) {
+        case "ArrowLeft":
+            inputKey = 1;
+            break;
+        case "ArrowRight":
+            inputKey = 2;
+            break;
+        default:
+            inputKey = 0;
     }
 
-    function animate() {
-        // const newResolution = new THREE.Vector2(
-        //     window.innerWidth / 1.5,
-        //     window.innerHeight / 1.5
-        //   );
-        //   material.uniforms.iResolution.value.copy(newResolution);
-        backgroundShader.uniforms.iTime.value += 0.0125;
-        renderer.render(scene, camera);
-    }
+    const message = {
+        query_id: queryID,
+        session_id: sessionID,
+        player_id: playerID,
+        input_key: inputKey,
+        input_type: inputType
+    };
+    if (gameSocket.readyState === WebSocket.OPEN)
+        gameSocket.send(JSON.stringify(message));
+}
 
-} else {
 
-    const warning = WebGL.getWebGLErrorMessage();
-    document.getElementById('container').appendChild(warning);
+
+
+function onWindowResize() {
+
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
 
 }
 
