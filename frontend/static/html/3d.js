@@ -14,8 +14,6 @@ import { TextGeometry } from 'TextGeometry';
 
 import { authState } from "./app.js";
 
-export let gameSocket = null; // WebSocket 객체를 전역 변수로 선언
-
 // official board size
 const boardWidth = 300;
 const boardHeight = 400;
@@ -36,10 +34,9 @@ export function removeGame() {
     }
 }
 
-
 const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
 
-gameSocket = new WebSocket(
+let gameSocket = new WebSocket(
     // TODO : ws to wss
     `${protocol}${window.location.hostname}/ws/game/`
 );
@@ -50,9 +47,6 @@ var username = localStorage.getItem("username");
 gameSocket.onmessage = function (event) {
     console.log("getting message from server");
 };
-
-gameSocket.binaryType = 'arraybuffer';
-
 
 gameSocket.onopen = function (event) {
     console.log("Connected to Websocket Game Server");
@@ -96,8 +90,16 @@ function startGameRound(roomNmae) {
 export function init() {
 
     if (WebGL.isWebGLAvailable()) {
+        gameSocket = new WebSocket(
+            // TODO : ws to wss
+            `${protocol}${window.location.hostname}/ws/game/`
+        );
+        gameSocket.binaryType = 'arraybuffer';
+
         const scene = new THREE.Scene();
         const gui = new GUI();
+        //textGeometry를 담을 배열
+        let textGroup = new Array();
 
         // 카메라 만들기 (FoV, aspect ratio, near clipping plane, far clipping plane );
         // window.innerWidth / window.innerHeight 은 화면의 비율 (aspect ratio)
@@ -114,7 +116,7 @@ export function init() {
         });
 
         // 세 번째 인자로 false를 주면 더 작은 레솔루션으로 렌더 가능 (최적화?)
-        // renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
+        renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
         // renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setPixelRatio(window.devicePixelRatio, 2);
 
@@ -198,7 +200,7 @@ export function init() {
 
     // Created by Deadtotem in 2020-08-13 shadertoy.com
     // https://www.shadertoy.com/view/tllfRX
-    #define NUM_LAYERS 8.
+#define NUM_LAYERS 4.
 #define TAU 6.28318
 #define PI 3.141592
 #define Velocity .025 //modified value to increse or decrease speed, negative value travel backwards
@@ -417,60 +419,60 @@ void main()
 
 
         // transparent white start screen
-        const startScreenGeometry = new THREE.BoxGeometry(boardWidth, boardHeight, 100);
-        const startScreenMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xFFFFFF,
-            transparent: true,
-            opacity: 0.5,
-            transmission: 0.5,
-            thickness: 1,
-            reflectivity: 1.0,
-            metalness: 1.0,
-            roughness: 0.1,
-        });
-        const startScreen = new THREE.Mesh(startScreenGeometry, startScreenMaterial);
-        startScreen.position.set(0, 0, 50);
-        scene.add(startScreen);
+        // const startScreenGeometry = new THREE.BoxGeometry(10000, 10000, 10);
+        // const startScreenMaterial = new THREE.MeshPhysicalMaterial({
+        //     color: 0xFFFFFF,
+        //     transparent: true,
+        //     opacity: 0.75,
+        //     transmission: 0.5,
+        //     thickness: 1,
+        //     reflectivity: 1.0,
+        //     metalness: 1.0,
+        //     roughness: 0.1,
+        // });
+        // const startScreen = new THREE.Mesh(startScreenGeometry, startScreenMaterial);
+        // startScreen.position.set(0, 0, 0);
+        // scene.add(startScreen);
 
         // dual mode button for start screen
-        const dualModeGeometry = new THREE.BoxGeometry(50, 50, 10);
+        const dualModeGeometry = new THREE.BoxGeometry(100, 100, 100);
 
         const dualModeMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0x000000,
+            color: 0xB38FF0,
             transparent: true,
-            opacity: 1.0,
+            opacity: 0.3,
             transmission: 0.5,
             thickness: 1,
             reflectivity: 1.0,
-            metalness: 1.0,
-            roughness: 0.1,
+            metalness: 0.0,
+            roughness: 0.5,
         });
 
         const dualModeButton = new THREE.Mesh(dualModeGeometry, dualModeMaterial);
-        dualModeButton.position.set(0, 0, 50);
+        dualModeButton.position.set(-150, 10, 50);
         scene.add(dualModeButton);
 
         // tournament mode button for start screen
-        const tournamentModeGeometry = new THREE.BoxGeometry(50, 50, 10);
+        const tournamentModeGeometry = new THREE.BoxGeometry(100, 100, 100);
 
         const tournamentModeMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0x000000,
+            color: 0xB38FF0,
             transparent: true,
-            opacity: 1.0,
+            opacity: 0.3,
             transmission: 0.5,
             thickness: 1,
             reflectivity: 1.0,
-            metalness: 1.0,
-            roughness: 0.1,
+            metalness: 0.0,
+            roughness: 0.5,
         });
 
         const tournamentModeButton = new THREE.Mesh(tournamentModeGeometry, tournamentModeMaterial);
-        tournamentModeButton.position.set(0, 0, 50);
+        tournamentModeButton.position.set(150, 10, 50);
         scene.add(tournamentModeButton);
 
         // dual text for dual mode button
         const dualTextGeometry = new TextGeometry("DUAL", {
-            font: fontLoader.load('fonts/helvetiker_regular.typeface.json'),
+            font: fontLoader.load('./PyeongChangPeaceBold_Regular.json'),
             size: 10,
             height: 5,
             curveSegments: 12,
@@ -480,80 +482,78 @@ void main()
             bevelSegments: 3,
         });
 
-        const dualTextMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xFFFFFF,
-            transparent: true,
-            opacity: 1.0,
-            transmission: 0.5,
-            thickness: 1,
-            reflectivity: 1.0,
-            metalness: 1.0,
-            roughness: 0.1,
-        });
+        const url = './PyeongChangPeaceBold_Regular.json'; //사용할 폰트 json 파일 위치(예제는 이순신 돋움)
 
-        const dualText = new THREE.Mesh(dualTextGeometry, dualTextMaterial);
-        dualText.position.set(0, 0, 50);
-        scene.add(dualText);
 
-        // tournament text for tournament mode button
-        const tournamentTextGeometry = new TextGeometry("TOURNAMENT", {
-            font: fontLoader.load('fonts/helvetiker_regular.typeface.json'),
-            size: 10,
-            height: 5,
-            curveSegments: 12,
-            bevelEnabled: true,
-            bevelThickness: 1,
-            bevelSize: 0.5,
-            bevelSegments: 3,
-        });
+        // TODO: 스코어랑 타이머, 게임 시작 전에는 스코어랑 타이머 안보이게
+        // 듀얼 모드, 토너먼트 모드 버튼 만들기
 
-        const tournamentTextMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xFFFFFF,
-            transparent: true,
-            opacity: 1.0,
-            transmission: 0.5,
-            thickness: 1,
-            reflectivity: 1.0,
-            metalness: 1.0,
-            roughness: 0.1,
-        });
+        
+        // 폰트를 load 후 처리하도록 async await 사용
 
-        const tournamentText = new THREE.Mesh(tournamentTextGeometry, tournamentTextMaterial);
-        tournamentText.position.set(0, 0, 50);
-        scene.add(tournamentText);
+
+
+        // const dualTextMaterial = new THREE.MeshPhysicalMaterial({
+        //     color: 0xFFFFFF,
+        //     transparent: false,
+        //     opacity: 1.0,
+        //     transmission: 0.5,
+        //     thickness: 1,
+        //     reflectivity: 1.0,
+        //     metalness: 0.0,
+        //     roughness: 0.5,
+        // });
+
+        // const dualText = new THREE.Mesh(dualTextGeometry, dualTextMaterial);
+        // // dualModeButton.position.set(150, 10, 50);
+        // dualText.position.set(-150, 0, 20);
+        // scene.add(dualText);
+
+        // // tournament text for tournament mode button
+        // const tournamentTextGeometry = new TextGeometry("TOURNAMENT", {
+        //     font: fontLoader.load('./PyeongChangPeaceBold_Regular.json'),
+        //     size: 10,
+        //     height: 5,
+        //     curveSegments: 12,
+        //     bevelEnabled: true,
+        //     bevelThickness: 1,
+        //     bevelSize: 0.5,
+        //     bevelSegments: 3,
+        // });
+
+        // const tournamentTextMaterial = new THREE.MeshPhysicalMaterial({
+        //     color: 0x000000,
+        //     transparent: false,
+        //     opacity: 1.0,
+        //     transmission: 0.5,
+        //     thickness: 1,
+        //     reflectivity: 1.0,
+        //     metalness: 0.0,
+        //     roughness: 0.5,
+        // });
+
+        // const tournamentText = new THREE.Mesh(tournamentTextGeometry, tournamentTextMaterial);
+        // tournamentText.position.set(150, 0, 20);
+        // scene.add(tournamentText);
 
 
 
         // gui용
-        // const options = {
-        //     DirectionalLightPositionX: 0,
-        //     DirectionalLightPositionY: -100,
-        //     DirectionalLightPositionZ: 100,
-        //     BallPositionX: 0,
-        //     BallPositionY: 0,
+        const options = {
+            BallPositionX: 0,
+            BallPositionY: 0,
 
-        //     // boardWidth: 828,
-        //     // boardHeight: 525,
-        // };
+            // boardWidth: 828,
+            // boardHeight: 525,
+        };
 
-        // gui.add(options, "DirectionalLightPositionX", 0, 1000, 1).onChange((val) => {
-        //     directionalLight.position.setX(val);
-        // });
-        // gui.add(options, "DirectionalLightPositionY", -5000, 5000, 1).onChange((val) => {
-        //     directionalLight.position.setY(val);
-        // });
-        // gui.add(options, "DirectionalLightPositionZ", 0, 5000, 1).onChange((val) => {
-        //     directionalLight.position.setZ(val);
-        // });
-        // gui.add(options, "BallPositionX", -boardWidth / 2, boardWidth / 2, 1).onChange((val) => {
-        //     ball.position.setX(val);
-        // });
-        // gui.add(options, "BallPositionY", -boardHeight / 2, boardHeight / 2, 1).onChange((val) => {
-        //     ball.position.setY(val);
-        // });
-        // gui.add(options, "boardHeight", 0, 2, 0.1).onChange((val) => {
-        //     board.scale.setY(val);
-        // });
+        gui.add(options, "BallPositionX", -boardWidth / 2, boardWidth / 2, 1).onChange((val) => {
+            ball.position.setX(val);
+        });
+        gui.add(options, "BallPositionY", -boardHeight / 2, boardHeight / 2, 1).onChange((val) => {
+            ball.position.setY(val);
+        });
+
 
         window.addEventListener('resize', onWindowResize);
 
@@ -567,6 +567,115 @@ void main()
             renderer.render(scene, camera);
         }
 
+        function onWindowResize() {
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
+
+        }
+
+        document.onkeydown = function (e) {
+            handleKeyInput(e.key, 1);
+        }
+
+        document.onkeyup = function (e) {
+            handleKeyInput(e.key, 2);
+        }
+
+        function handleKeyInput(key, inputType) {
+            const queryID = 301;
+            const sessionID = 1;  // This should be the actual session ID
+            const playerID = 1;   // 1 for Player A, 2 for Player B
+            let inputKey;
+
+            switch (key) {
+                case "ArrowLeft":
+                    inputKey = 1;
+                    break;
+                case "ArrowRight":
+                    inputKey = 2;
+                    break;
+                default:
+                    inputKey = 0;
+            }
+
+            const message = {
+                query_id: queryID,
+                session_id: sessionID,
+                player_id: playerID,
+                input_key: inputKey,
+                input_type: inputType
+            };
+            if (gameSocket.readyState === WebSocket.OPEN)
+                gameSocket.send(JSON.stringify(message));
+        }
+
+        //Text 생성
+        const createText = (message, size, scene, color = 0xB38FF0) => {
+            const fontLoader = new FontLoader();
+
+            async function loadFont() {
+                const url = './PyeongChangPeaceBold_Regular.json'; //사용할 폰트 json 파일 위치(예제는 이순신 돋움)
+
+                //폰트를 load 후 처리하도록 async await 사용
+                const font = await new Promise((resolve, reject) => {
+                    fontLoader.load(url, resolve, undefined, reject);
+                });
+
+                const geometry = new THREE.TextGeometry(message, {
+                    font,
+                    size,
+                    height: 1,
+                    curveSegments: 4,
+                    bevelEnabled: false
+                });
+
+                //글자 채울 Material 설정
+                const fillMaterial = new THREE.MeshPhongMaterial({ color });
+                const cube = new THREE.Mesh(geometry, fillMaterial);
+
+                //폴리곤 보여줄 LineMaterial 설정
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
+                const line = new THREE.LineSegments(
+                    new THREE.WireframeGeometry(geometry), lineMaterial
+                );
+
+                //글자와 폴리곤을 그룹으로 묶어줌
+                const group = new THREE.Group();
+                group.add(cube);
+                group.add(line);
+
+                scene.add(group);
+
+                textGroup.push(group);
+            }
+
+            loadFont();
+        }
+
+        //Text 재생성
+        const refreshText = (size, scene, color = 0xB38FF0) => {
+            //예외처리
+            if (textGroup.length < 1) return;
+
+            //기존 개체 index 범위 저장
+            const index = textGroup.length;
+
+            //기존 textGroup 개체를 새로 생성
+            textGroup.map(e => createText(e.children[0].geometry.parameters.text, size, scene, color));
+
+            //기존 textGroup 개체만 scene에서 삭제
+            for (let i = 0; i < index; i++) {
+                scene.remove(textGroup[i]);
+            }
+
+            //textGroup 배열에서 기존 개체 제거
+            textGroup.splice(0, index);
+        }
+
+
     } else {
 
         const warning = WebGL.getWebGLErrorMessage();
@@ -575,51 +684,8 @@ void main()
     }
 }
 
-document.onkeydown = function (e) {
-    handleKeyInput(e.key, 1);
-}
-
-document.onkeyup = function (e) {
-    handleKeyInput(e.key, 2);
-}
-
-function handleKeyInput(key, inputType) {
-    const queryID = 301;
-    const sessionID = 1;  // This should be the actual session ID
-    const playerID = 1;   // 1 for Player A, 2 for Player B
-    let inputKey;
-
-    switch (key) {
-        case "ArrowLeft":
-            inputKey = 1;
-            break;
-        case "ArrowRight":
-            inputKey = 2;
-            break;
-        default:
-            inputKey = 0;
-    }
-
-    const message = {
-        query_id: queryID,
-        session_id: sessionID,
-        player_id: playerID,
-        input_key: inputKey,
-        input_type: inputType
-    };
-    if (gameSocket.readyState === WebSocket.OPEN)
-        gameSocket.send(JSON.stringify(message));
-}
 
 
 
 
-function onWindowResize() {
-
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-}
 
