@@ -4,9 +4,12 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from django.contrib.auth import get_user_model
 
-User = get_user_model()
 
 class ChatConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.User = get_user_model()
+
     async def connect(self):
         self.room_group_name = 'chat_global'
 
