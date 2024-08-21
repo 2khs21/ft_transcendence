@@ -45,10 +45,14 @@ tournamentDualQueue = []
 class GameConsumer(AsyncWebsocketConsumer):  # GameConsumer 클래스는 AsyncWebSocketConsumer를 상속받아 WebSocket 통신과 Pong 게임 로직을 구현합니다.
 
     async def connect(self):  # 클라이언트가 WebSocket 연결을 시도할 때 호출되는 메서드입니다.
+        self.room_group_name = 'game_global'
 
-        # 조건 없이 수락
+        # Join room group
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
 
-        # WebSocket 연결 수락
         await self.accept()
 
     async def disconnect(self, close_code):  # 클라이언트가 WebSocket 연결을 끊을 때 호출되는 메서드입니다.

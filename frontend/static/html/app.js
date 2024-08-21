@@ -4,13 +4,11 @@
 import { renderLogin } from "./login.js";
 import { renderRegister } from "./register.js";
 import { renderHome, cleanupHome } from "./home.js";
-import { renderGame } from "./game.js";
 import { renderProfile } from "./profile.js";
 import { initializeChat, chatSocket } from "./chat.js";
 import { updateUserConnection } from "./func.js"; // 새로 추가
 
-// TODO : 제거 예정
-import * as three from "./3d.js";
+import { renderGame, removeGame } from "./3d.js";
 
 export const authState = {
   isLoggedIn: false,
@@ -31,12 +29,16 @@ export function navigate(path, pushState = true) {
   if (pushState) {
     history.pushState({ path }, "", path);
   }
+
   updateContent(path);
 }
 
 function updateContent(path) {
   if (path !== "/") {
     cleanupHome(); // Clean up home page when navigating away
+    if (path !== "/game") {
+      removeGame(); // Clean up game page when navigating away
+    }
   }
 
   const renderFunction = routes[path] || routes["/"];
