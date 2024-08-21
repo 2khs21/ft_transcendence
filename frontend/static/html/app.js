@@ -9,6 +9,9 @@ import { renderProfile } from "./profile.js";
 import { initializeChat, chatSocket } from "./chat.js";
 import { updateUserConnection } from "./func.js"; // 새로 추가
 
+// TODO : 제거 예정
+import * as three from "./3d.js";
+
 export const authState = {
   isLoggedIn: false,
 };

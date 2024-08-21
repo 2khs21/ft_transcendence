@@ -20,7 +20,8 @@ export function initializeChat() {
   }
   const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
   chatSocket = new WebSocket(
-    `${protocol}${window.location.hostname}:8080/ws/chat/`
+    // TODO : ws to wss
+    `${protocol}${window.location.hostname}/ws/chat/`
   );
 
   chatSocket.onopen = function (e) {
