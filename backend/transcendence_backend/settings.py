@@ -45,7 +45,8 @@ INSTALLED_APPS = [
 	'channels',
     'django.contrib.admin',
 	'core',
-
+    'chat',
+    'game',
 ]
 
 MIDDLEWARE = [
