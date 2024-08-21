@@ -12,7 +12,7 @@ down:
 clean :
 	docker compose -f docker-compose.yml down -v --rmi all --remove-orphans
 
-fclean:
+fclean: clean
 	docker system prune --volumes --all --force
 	docker network prune --force
 	docker volume prune --force
