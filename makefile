@@ -1,5 +1,5 @@
 up:
-	docker compose up --build
+	docker compose up --build -d
 
 build:
 	docker compose build
@@ -9,10 +9,15 @@ back_re:
 down:
 	docker compose down --volumes
 
+clean :
+	docker compose -f docker-compose.yml down -v --rmi all --remove-orphans
+
 fclean:
-	-docker ps -qa | xargs -r docker rm
-	-docker images -q | xargs -r docker rmi
-	-docker volume ls -q | xargs -r docker volume rm
+	docker system prune --volumes --all --force
+	docker network prune --force
+	docker volume prune --force
+	docker image prune --force
+	docker container prune --force
 	-rm -rf data/
 	-find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
 	-find . -path "*/migrations/*.pyc" -delete
