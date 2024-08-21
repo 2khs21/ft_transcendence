@@ -8,10 +8,13 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
   redis:
     image: redis:alpine
-    ports:
-      - "6379:6379"
+    networks:
+      - intra
+    expose:
+      - 6379
 
   backend:
     restart: unless-stopped
@@ -27,8 +30,8 @@ services:
       "
     volumes:
       - ./backend:/code
-    ports:
-      - "8000:8000"
+    expose:
+      - 8000
     depends_on:
       - db
     environment:
@@ -37,16 +40,35 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - DJANGO_SETTINGS_MODULE=transcendence_backend.settings
       - PYTHONPATH=/code
+    networks:
+      - intra
 
   frontend:
     restart: unless-stopped
     build: ./frontend
     ports:
-      - 8080:80
       - 443:443
     volumes:
       - ./frontend/static/html:/usr/share/nginx/html
       - ./frontend/static/images:/usr/share/nginx/images
-      - ./frontend/default.conf:/etc/nginx/conf.d/default.conf
       - ./backend/media:/usr/share/nginx/media # 미디어 파일을 위한 볼륨 추가
 
+  gameserver:
+    container_name: gameserver
+    image: server:transcendence
+    pull_policy: never
+    expose:
+      - 9180
+    build:
+      context: ./resource/PongServer/
+      dockerfile: ./Dockerfile
+    env_file:
+      - ".env"
+    command: /code/server.out
+    restart: unless-stopped
+    networks:
+      - intra
+
+networks:
+  intra:
+    driver: bridge
