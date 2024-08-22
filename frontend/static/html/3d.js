@@ -88,26 +88,36 @@ function startGameRound(roomNmae) {
 
 // 씬 만들기
 export function init() {
-
+    
     if (WebGL.isWebGLAvailable()) {
         gameSocket = new WebSocket(
             // TODO : ws to wss
             `${protocol}${window.location.hostname}/ws/game/`
         );
         gameSocket.binaryType = 'arraybuffer';
-
+        
         const scene = new THREE.Scene();
         const gui = new GUI();
         //textGeometry를 담을 배열
-        let textGroup = new Array();
+        
+        // for raycasting
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        let SELECTED;
+        
+        let raycastArray = new Array(2);
+        let scoreArray = new Array();
+        // let raycastMesh, raycastLine;
+        
 
         // 카메라 만들기 (FoV, aspect ratio, near clipping plane, far clipping plane );
         // window.innerWidth / window.innerHeight 은 화면의 비율 (aspect ratio)
         // near clipping plane 아래와 far clipping plane 밖은 렌더되지 않음.
-        const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 5000);
+        const camera = new THREE.PerspectiveCamera(90, (window.innerWidth / 1.5) / (window.innerHeight / 1.5), 0.1, 5000);
         camera.position.set(0, -250, 150);
         // camera.position.set(0, -50, 100);
         camera.lookAt(0, 70, -50);
+        camera.aspect = (window.innerWidth / 1.5) / (window.innerHeight / 1.5);
 
         // 렌더러 만들기, 브라우저 윈도우만큼 사이즈를 지정해 주었는데 다른 경우도 가능할 듯?
         // window.innerWidth/2 and window.innerHeight/2 라고 한다.
@@ -126,8 +136,11 @@ export function init() {
         // 그림자 on
         renderer.shadowMap.enabled = true;
 
-        if (document.getElementById('app').children.length == 0)
+        if (document.getElementById('app').children.length == 0) {
             document.getElementById('app').appendChild(renderer.domElement);
+            document.getElementById('app').children[0].id = 'pong';
+        }
+        let container = document.getElementById( 'pong' );
 
         const ambientLightColor = 0x404040;
         const ambientLightIntensity = 10;
@@ -414,128 +427,89 @@ void main()
         // spotLight.target = ball;
         // scene.add( spotLight );
 
-        // for score
-        const fontLoader = new FontLoader();
+        //Text 생성
+        const createText = (message, size, position, rotation, scene, color = 0xB38FF0) => {
+            const fontLoader = new FontLoader();
+
+            async function loadFont() {
+                const url = './PyeongChangPeaceBold_Regular.json'; //사용할 폰트 json 파일 위치(예제는 이순신 돋움)
+
+                //폰트를 load 후 처리하도록 async await 사용
+                const font = await new Promise((resolve, reject) => {
+                    fontLoader.load(url, resolve, undefined, reject);
+                });
+
+                const geometry = new TextGeometry(message, {
+                    font: font,
+                    size: size,
+                    depth: 5,
+                    curveSegments: 12,
+                    bevelEnabled: true,
+                    bevelThickness: 1,
+                    bevelSize: 0.5,
+                    bevelSegments: 3,
+                });
+
+                //글자 채울 Material 설정
+                const fillMaterial = new THREE.MeshPhongMaterial({ color });
+                // const scoreMaterial = new THREE.MeshPhysicalMaterial({
+                //     color: 0xFFFFFF,
+                //     transparent: false,
+                //     opacity: 1.0,
+                //     transmission: 0.5,
+                //     thickness: 1,
+                //     reflectivity: 1.0,
+                //     metalness: 0.0,
+                //     roughness: 0.5,
+                // });
+                const text = new THREE.Mesh(geometry, fillMaterial);
+
+                text.position.set(position.x, position.y, position.z);
+                text.rotation.set(rotation.x, rotation.y, rotation.z);
+
+                if (message === "얼  듀") {
+                    raycastArray[0] = text;
+                }
+                else if (message === "트  먼  너  토") {
+                    raycastArray[1] = text;
+                } 
+                // 메시지가 숫자일 경우
+                else if (!isNaN(message)) {
+                    scoreArray.push(text);
+                }
 
 
-        // transparent white start screen
-        // const startScreenGeometry = new THREE.BoxGeometry(10000, 10000, 10);
-        // const startScreenMaterial = new THREE.MeshPhysicalMaterial({
-        //     color: 0xFFFFFF,
-        //     transparent: true,
-        //     opacity: 0.75,
-        //     transmission: 0.5,
-        //     thickness: 1,
-        //     reflectivity: 1.0,
-        //     metalness: 1.0,
-        //     roughness: 0.1,
-        // });
-        // const startScreen = new THREE.Mesh(startScreenGeometry, startScreenMaterial);
-        // startScreen.position.set(0, 0, 0);
-        // scene.add(startScreen);
+                scene.add(text);
 
-        // dual mode button for start screen
-        const dualModeGeometry = new THREE.BoxGeometry(100, 100, 100);
+            }
 
-        const dualModeMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xB38FF0,
-            transparent: true,
-            opacity: 0.3,
-            transmission: 0.5,
-            thickness: 1,
-            reflectivity: 1.0,
-            metalness: 0.0,
-            roughness: 0.5,
-        });
+            loadFont();
+        }
 
-        const dualModeButton = new THREE.Mesh(dualModeGeometry, dualModeMaterial);
-        dualModeButton.position.set(-150, 10, 50);
-        scene.add(dualModeButton);
+        const textRotation = new THREE.Vector3(Math.PI / 2, 0, 0);
 
-        // tournament mode button for start screen
-        const tournamentModeGeometry = new THREE.BoxGeometry(100, 100, 100);
+        const addScores = (player1Score, player2Score) => {
 
-        const tournamentModeMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xB38FF0,
-            transparent: true,
-            opacity: 0.3,
-            transmission: 0.5,
-            thickness: 1,
-            reflectivity: 1.0,
-            metalness: 0.0,
-            roughness: 0.5,
-        });
+            //플레이어1, 플레이어2 점수 위치
 
-        const tournamentModeButton = new THREE.Mesh(tournamentModeGeometry, tournamentModeMaterial);
-        tournamentModeButton.position.set(150, 10, 50);
-        scene.add(tournamentModeButton);
+            const player1ScorePosition = new THREE.Vector3(-boardWidth / 2 - 12.5, 200, 100);
+            const player2ScorePosition = new THREE.Vector3(boardWidth / 2 + 12.5, 200, 100);
 
-        // dual text for dual mode button
-        const dualTextGeometry = new TextGeometry("DUAL", {
-            font: fontLoader.load('./PyeongChangPeaceBold_Regular.json'),
-            size: 10,
-            height: 5,
-            curveSegments: 12,
-            bevelEnabled: true,
-            bevelThickness: 1,
-            bevelSize: 0.5,
-            bevelSegments: 3,
-        });
+            // uses radians
 
-        const url = './PyeongChangPeaceBold_Regular.json'; //사용할 폰트 json 파일 위치(예제는 이순신 돋움)
+            const scoreStr1 = player1Score.toString();
+            const scoreStr2 = player2Score.toString();
 
+            createText(scoreStr1, 50, player1ScorePosition, textRotation, scene, 0xFF8FF0);
+            createText(scoreStr2, 50, player2ScorePosition, textRotation, scene, 0xB38FFF);
 
-        // TODO: 스코어랑 타이머, 게임 시작 전에는 스코어랑 타이머 안보이게
-        // 듀얼 모드, 토너먼트 모드 버튼 만들기
+        }
 
-        
-        // 폰트를 load 후 처리하도록 async await 사용
+        addScores(0, 0);
 
-
-
-        // const dualTextMaterial = new THREE.MeshPhysicalMaterial({
-        //     color: 0xFFFFFF,
-        //     transparent: false,
-        //     opacity: 1.0,
-        //     transmission: 0.5,
-        //     thickness: 1,
-        //     reflectivity: 1.0,
-        //     metalness: 0.0,
-        //     roughness: 0.5,
-        // });
-
-        // const dualText = new THREE.Mesh(dualTextGeometry, dualTextMaterial);
-        // // dualModeButton.position.set(150, 10, 50);
-        // dualText.position.set(-150, 0, 20);
-        // scene.add(dualText);
-
-        // // tournament text for tournament mode button
-        // const tournamentTextGeometry = new TextGeometry("TOURNAMENT", {
-        //     font: fontLoader.load('./PyeongChangPeaceBold_Regular.json'),
-        //     size: 10,
-        //     height: 5,
-        //     curveSegments: 12,
-        //     bevelEnabled: true,
-        //     bevelThickness: 1,
-        //     bevelSize: 0.5,
-        //     bevelSegments: 3,
-        // });
-
-        // const tournamentTextMaterial = new THREE.MeshPhysicalMaterial({
-        //     color: 0x000000,
-        //     transparent: false,
-        //     opacity: 1.0,
-        //     transmission: 0.5,
-        //     thickness: 1,
-        //     reflectivity: 1.0,
-        //     metalness: 0.0,
-        //     roughness: 0.5,
-        // });
-
-        // const tournamentText = new THREE.Mesh(tournamentTextGeometry, tournamentTextMaterial);
-        // tournamentText.position.set(150, 0, 20);
-        // scene.add(tournamentText);
-
+        // 흠......
+        createText("얼  듀", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xFFFFFF);
+        createText("트  먼  너  토", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xFFFFFF);
 
 
         // gui용
@@ -556,20 +530,52 @@ void main()
 
 
         window.addEventListener('resize', onWindowResize);
+        container.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        container.addEventListener( 'mousedown', onDocumentMouseDown, false );
+        container.addEventListener( 'resize', onWindowResize, false );
 
         function animate() {
-            // const newResolution = new THREE.Vector2(
-            //     window.innerWidth / 1.5,
-            //     window.innerHeight / 1.5
-            //   );
-            //   material.uniforms.iResolution.value.copy(newResolution);
+
             backgroundShader.uniforms.iTime.value += 0.0125;
+            // find intersections
+
+            raycaster.setFromCamera(pointer, camera);
+
+            let intersects = raycaster.intersectObjects(scene.children);
+
+            if (intersects.length > 0) {
+                if (SELECTED != intersects[0].object) {
+
+                    // 듀얼, 토너먼트 클릭 시 동작
+                    if (SELECTED && SELECTED.material.emissive) {
+                        SELECTED.material.emissive.setHex( SELECTED.currentHex );
+                    }
+
+                    SELECTED = intersects[0].object;
+                    if (SELECTED && SELECTED.material.emissive && (SELECTED == raycastArray[0] || SELECTED == raycastArray[1])) {
+                        SELECTED.currentHex = SELECTED.material.emissive.getHex();
+                        SELECTED.material.emissive.setHex(0xff0000);
+                    }
+                    container.style.cursor = 'pointer';
+
+                }
+            }
+            else {
+                if (SELECTED) {
+                    if (SELECTED.material.emissive)
+                        SELECTED.material.emissive.setHex(SELECTED.currentHex);
+                    SELECTED = null;
+                    container.style.cursor = 'auto';
+                }
+            }
+
+
             renderer.render(scene, camera);
         }
 
         function onWindowResize() {
 
-            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = (window.innerWidth / 1.5) / (window.innerHeight / 1.5);
             camera.updateProjectionMatrix();
 
             renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
@@ -612,67 +618,26 @@ void main()
                 gameSocket.send(JSON.stringify(message));
         }
 
-        //Text 생성
-        const createText = (message, size, scene, color = 0xB38FF0) => {
-            const fontLoader = new FontLoader();
+        function onDocumentMouseMove( event ) {
 
-            async function loadFont() {
-                const url = './PyeongChangPeaceBold_Regular.json'; //사용할 폰트 json 파일 위치(예제는 이순신 돋움)
-
-                //폰트를 load 후 처리하도록 async await 사용
-                const font = await new Promise((resolve, reject) => {
-                    fontLoader.load(url, resolve, undefined, reject);
-                });
-
-                const geometry = new THREE.TextGeometry(message, {
-                    font,
-                    size,
-                    height: 1,
-                    curveSegments: 4,
-                    bevelEnabled: false
-                });
-
-                //글자 채울 Material 설정
-                const fillMaterial = new THREE.MeshPhongMaterial({ color });
-                const cube = new THREE.Mesh(geometry, fillMaterial);
-
-                //폴리곤 보여줄 LineMaterial 설정
-                const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
-                const line = new THREE.LineSegments(
-                    new THREE.WireframeGeometry(geometry), lineMaterial
-                );
-
-                //글자와 폴리곤을 그룹으로 묶어줌
-                const group = new THREE.Group();
-                group.add(cube);
-                group.add(line);
-
-                scene.add(group);
-
-                textGroup.push(group);
-            }
-
-            loadFont();
+            event.preventDefault();
+    
+            let gapX = event.clientX - event.offsetX;
+            let gapY = event.clientY - event.offsetY;
+            
+            pointer.x = ((event.clientX - gapX)/( container.clientWidth )) * 2 - 1;
+            pointer.y = -((event.clientY - gapY)/( container.clientHeight )) * 2 + 1;
+    
         }
 
-        //Text 재생성
-        const refreshText = (size, scene, color = 0xB38FF0) => {
-            //예외처리
-            if (textGroup.length < 1) return;
+        function onDocumentMouseDown( event ) {
 
-            //기존 개체 index 범위 저장
-            const index = textGroup.length;
-
-            //기존 textGroup 개체를 새로 생성
-            textGroup.map(e => createText(e.children[0].geometry.parameters.text, size, scene, color));
-
-            //기존 textGroup 개체만 scene에서 삭제
-            for (let i = 0; i < index; i++) {
-                scene.remove(textGroup[i]);
+            event.preventDefault();
+            if ( SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[0] || SELECTED == raycastArray[1] ) {
+                SELECTED.currentHex = 0x00ff00 * Math.random();
+                SELECTED.material.emissive.setHex( SELECTED.currentHex );
             }
-
-            //textGroup 배열에서 기존 개체 제거
-            textGroup.splice(0, index);
+    
         }
 
 
