@@ -5,7 +5,10 @@ build:
 	docker compose build
 
 back_re:
-	docker-compose up -d --no-deps backend
+	docker compose up -d --no-deps backend
+front:
+	docker compose up -d --no-deps frontend
+
 down:
 	docker compose down --volumes
 
