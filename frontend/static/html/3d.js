@@ -34,6 +34,11 @@ export function removeGame() {
     }
 }
 
+function restartGame() {
+    removeGame();
+    init();
+}
+
 const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
 
 let gameSocket = new WebSocket(
@@ -43,10 +48,12 @@ let gameSocket = new WebSocket(
 
 var username = localStorage.getItem("username");
 
-// get every message from the server
+
+// ------------- Django - Browser communication main logic -------------
 gameSocket.onmessage = function (event) {
     console.log("getting message from server");
 };
+// ---------------------------------------------------------------------
 
 gameSocket.onopen = function (event) {
     console.log("Connected to Websocket Game Server");
@@ -59,7 +66,7 @@ gameSocket.onclose = function () {
 gameSocket.onerror = function (error) {
     if (authState.isLoggedIn == true) {
         console.error("Game socket closed unexpectedly reason : " + error);
-        setTimeout(() => createGameSession(), 5000);
+        setTimeout(() => restartGame(), 5000);
     } else {
         console.log("WebSocket connection closed during logout.");
     }
@@ -82,8 +89,22 @@ function startGameRound(roomNmae) {
     gameSocket.send(JSON.stringify(message));
 }
 
+function matchDual() {
+    const message = {
+        type: match_dual,
+    };
+    gameSocket.send(JSON.stringify(message));
+}
 
-/* --------------------- game logic starts --------------------- */
+function matchTournament() {
+    const message = {
+        type: match_tournament,
+    };
+    gameSocket.send(JSON.stringify(message));
+}
+
+
+/* --------------------- THREE.js game logic starts --------------------- */
 
 
 // 씬 만들기
@@ -439,7 +460,11 @@ void main()
                     fontLoader.load(url, resolve, undefined, reject);
                 });
 
-                const geometry = new TextGeometry(message, {
+                const revMessage = message.split("").reverse().join("  ");
+
+                console.log(revMessage);
+
+                const geometry = new TextGeometry(revMessage, {
                     font: font,
                     size: size,
                     depth: 5,
@@ -467,10 +492,10 @@ void main()
                 text.position.set(position.x, position.y, position.z);
                 text.rotation.set(rotation.x, rotation.y, rotation.z);
 
-                if (message === "얼  듀") {
+                if (message === "듀얼") {
                     raycastArray[0] = text;
                 }
-                else if (message === "트  먼  너  토") {
+                else if (message === "토너먼트") {
                     raycastArray[1] = text;
                 } 
                 // 메시지가 숫자일 경우
@@ -492,8 +517,8 @@ void main()
 
             //플레이어1, 플레이어2 점수 위치
 
-            const player1ScorePosition = new THREE.Vector3(-boardWidth / 2 - 12.5, 200, 100);
-            const player2ScorePosition = new THREE.Vector3(boardWidth / 2 + 12.5, 200, 100);
+            const player1ScorePosition = new THREE.Vector3(-boardWidth / 2 - 50, 200, 100);
+            const player2ScorePosition = new THREE.Vector3(boardWidth / 2 - 0, 200, 100);
 
             // uses radians
 
@@ -508,8 +533,8 @@ void main()
         addScores(0, 0);
 
         // 흠......
-        createText("얼  듀", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xFFFFFF);
-        createText("트  먼  너  토", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xFFFFFF);
+        createText("듀얼", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xB38FF0);
+        createText("토너먼트", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xB38FF0);
 
 
         // gui용
@@ -630,16 +655,30 @@ void main()
     
         }
 
+        // 듀얼과 토너먼트 클릭 시 이벤트
         function onDocumentMouseDown( event ) {
 
             event.preventDefault();
-            if ( SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[0] || SELECTED == raycastArray[1] ) {
-                SELECTED.currentHex = 0x00ff00 * Math.random();
-                SELECTED.material.emissive.setHex( SELECTED.currentHex );
+            if ( SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[0]) {
+                console.log("clicked Dual");
+                scene.remove(raycastArray[0]);
+                scene.remove(raycastArray[1]);
+
+                createText("매칭!", 20, new THREE.Vector3(20, -100, 100), textRotation, scene, 0xB38FF0);
+
+                matchDual();
+
+            } else if ( SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[1]) {
+                console.log("clicked Tournament");
+                scene.remove(raycastArray[0]);
+                scene.remove(raycastArray[1]);
+
+                createText("매칭!", 20, new THREE.Vector3(20, -100, 100), textRotation, scene, 0xB38FF0);
+
+                matchTournament();
             }
     
         }
-
 
     } else {
 
