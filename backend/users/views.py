@@ -207,3 +207,20 @@ class PongRecordListCreateView(generics.ListCreateAPIView):
     queryset = PongRecord.objects.all()
     serializer_class = PongRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+###### oauth ######
+from django.shortcuts import redirect
+from django.conf import settings
+import urllib.parse
+
+
+def oauth_login(request):
+    params = {
+        'client_id': settings.FORTYTWO_CLIENT_ID,
+        'redirect_uri': settings.FORTYTWO_REDIRECT_URI,
+        'response_type': 'code',
+        'scope': 'public'
+    }
+    url = f"{settings.FORTYTWO_AUTH_URL}?{urllib.parse.urlencode(params)}"
+    return redirect(url)
