@@ -3,41 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Your App</title>
+    <title>42 OAuth SPA</title>
     <style>
       /* 기본 스타일 */
       .hidden {
         display: none;
       }
     </style>
-
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.js",
-          "WebGL": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/capabilities/WebGL.js",
-          "Addons": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/Addons.js",
-          "TextGeometry": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/geometries/TextGeometry.js",
-          "GUI": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/libs/lil-gui.module.min.js",
-          "RoundedBoxGeometry" : "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/geometries/RoundedBoxGeometry.js",
-          "FontLoader" : "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/loaders/FontLoader.js"
-          }
-      }
-    </script>
-
+    <script type="module" src="app.js"></script>
   </head>
   <body>
     <nav id="main-nav" class="hidden">
+      <!-- <a href="/" id="home-tab">Home</a>
+      <a href="/game" id="game-tab">Game</a>
+      <a href="/profile" id="profile-tab">Profile</a> -->
       <button id="home-tab">Home</button>
       <button id="game-tab">Game</button>
       <button id="profile-tab">Profile</button>
       <button id="logout-btn">Logout</button>
     </nav>
-
-    <div id="app">
-      <!-- 컨텐츠가 여기에 로드됩니다 -->
-    </div>
-
-    <script src="/app.js" type="module"></script>
+    <div id="app"></div>
   </body>
 </html>

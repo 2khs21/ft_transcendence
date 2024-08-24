@@ -1,6 +1,6 @@
 #users/urls.py
 from django.urls import path
-from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView, FriendView, MuteView, PongRecordListCreateView
+from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView, FriendView, MuteView, PongRecordListCreateView,LogoutView
 from . import views
 
 urlpatterns = [
@@ -23,4 +23,7 @@ urlpatterns = [
 	path('pong-record/', PongRecordListCreateView.as_view(), name='pong-record-list-create'),
 
 	path('oauth/login/', views.oauth_login, name='oauth_login'),
+	path('oauth/callback/', views.oauth_callback, name='oauth_callback'),
+	path('logout/', LogoutView.as_view(), name='logout'),
+
 ]

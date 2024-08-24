@@ -90,7 +90,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'status_message', 'profile_image_url']
+        exclude = ['password']  # 비밀번호 필드를 제외한 모든 필드
 
     def get_profile_image_url(self, obj):
         return obj.get_profile_image_url()
