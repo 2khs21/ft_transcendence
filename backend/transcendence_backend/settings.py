@@ -13,6 +13,46 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 
+# 42 OAuth 설정
+FORTYTWO_CLIENT_ID = os.getenv('FORTYTWO_CLIENT_ID')
+FORTYTWO_CLIENT_SECRET = os.getenv('FORTYTWO_CLIENT_SECRET')
+FORTYTWO_REDIRECT_URI = os.getenv('FORTYTWO_REDIRECT_URI')
+FORTYTWO_REDIRECT_URI = 'https://localhost:443/api/users/oauth/callback/'
+print(f"FORTYTWO_CLIENT_ID: {FORTYTWO_CLIENT_ID}")  # 디버깅을 위한 출력
+print(f"FORTYTWO_CLIENT_SECRET: {FORTYTWO_CLIENT_SECRET}")  # 디버깅을 위한 출력
+print(f"FORTYTWO_REDIRECT_URI: {FORTYTWO_REDIRECT_URI}")  # 디버깅을 위한 출력
+FORTYTWO_AUTH_URL = os.getenv('FORTYTWO_AUTH_URL')
+FORTYTWO_TOKEN_URL = os.getenv('FORTYTWO_TOKEN_URL')
+FORTYTWO_API_URL = os.getenv('FORTYTWO_API_URL')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',  # INFO 수준의 요청/응답 로그가 출력되지 않도록 설정
+            'propagate': True,
+        },
+        'users': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -177,6 +217,7 @@ CSRF_COOKIE_SECURE = False # HTTP를 사용하는 경우
 CSRF_USE_SESSIONS = False  # 세션 대신 쿠키 사용
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",  # 예시: 프론트엔드가 동작하는 로컬 호스트 주소
+    "https://localhost:443",
     "https://example.com",    # 예시: 프로덕션 도메인
     # 다른 허용할 도메인들을 여기에 추가하세요.
 ]

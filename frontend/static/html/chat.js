@@ -1,205 +1,236 @@
 // chat.js
-import { authState, getCookie } from "./app.js";
-import { manageFriend, manageMute } from "./func.js";
-import { getOtherUserProfile } from "./func.js";
 
-export let chatSocket = null; // WebSocket 객체를 전역 변수로 선언
+// 필요한 함수들을 import합니다.
+import { authState } from "./app.js";
+import {
+  manageFriend,
+  manageMute,
+  getOtherUserProfile,
+  updateUserConnection,
+} from "./func.js";
+import { getUsername } from "./profile.js";
+// WebSocket 객체를 전역 변수로 선언합니다.
+export let chatSocket = null;
 
+/**
+ * 채팅 기능을 초기화하는 함수입니다.
+ * 이 함수는 app.js의 init 함수에서 호출됩니다.
+ */
 export function initializeChat() {
+  // 채팅 UI를 생성합니다.
+  createChatUI();
+
+  // WebSocket 연결을 설정합니다.
+  setupWebSocket();
+
+  // 이벤트 리스너를 설정합니다.
+  setupEventListeners();
+}
+
+/**
+ * 채팅 UI를 생성하는 함수입니다.
+ */
+function createChatUI() {
   if (!document.getElementById("chat-container")) {
     const chatContainer = document.createElement("div");
     chatContainer.id = "chat-container";
     chatContainer.innerHTML = `
-    <div id="chat-messages" style="overflow-y: scroll; height: 100px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
-    <div id="chat-box"></div> <!-- chat-box 요소 추가 -->
-    </div>
-    <input type="text" id="chat-input" placeholder="Type a message..." style="width: 80%; padding: 5px;">
-    <button id="chat-send" style="width: 18%; padding: 5px;">Send</button>
+      <div id="chat-messages" style="overflow-y: scroll; height: 100px; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+        <div id="chat-box"></div>
+      </div>
+      <input type="text" id="chat-input" placeholder="Type a message..." style="width: 80%; padding: 5px;">
+      <button id="chat-send" style="width: 18%; padding: 5px;">Send</button>
     `;
     document.body.appendChild(chatContainer);
   }
-  const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-  chatSocket = new WebSocket(
-    // TODO : ws to wss
-    `${protocol}${window.location.hostname}/ws/chat/`
-  );
+}
+/**
+ * 채팅 UI를 제거하는 함수입니다.
+ */
+export function removeChatUI() {
+  const chatContainer = document.getElementById("chat-container");
+  if (chatContainer) {
+    chatContainer.remove();
+  }
+}
 
-  chatSocket.onopen = function (e) {
+/**
+ * WebSocket 연결을 설정하는 함수입니다.
+ */
+
+function setupWebSocket() {
+  const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+  chatSocket = new WebSocket(`${protocol}${window.location.hostname}/ws/chat/`);
+
+  chatSocket.onopen = async function (e) {
     console.log("WebSocket connection established");
+    const username = localStorage.getItem("username");
+    if (username) {
+      try {
+        await updateUserConnection(username, true); // 연결 상태를 true로 업데이트
+        console.log(`User ${username} connected`);
+      } catch (error) {
+        console.error("Error updating user connection status:", error);
+      }
+    }
   };
 
   chatSocket.onmessage = function (e) {
     const data = JSON.parse(e.data);
     displayMessage(data);
-    console.log("onmessage");
   };
 
-  chatSocket.onclose = function (e) {
-    if (authState.isLoggedIn == true) {
+  chatSocket.onclose = async function (e) {
+    const username = localStorage.getItem("username");
+    console.log(username + "is close?,why username exist error");
+    if (localStorage.getItem("accessToken")) {
+      try {
+        await updateUserConnection(username, false); // 연결 상태를 false로 업데이트
+        console.log(`User ${username} disconnected`);
+      } catch (error) {
+        console.error("Error updating user disconnection status:", error);
+      }
+    }
+
+    if (authState.isLoggedIn) {
       console.error("Chat socket closed unexpectedly");
-      setTimeout(() => initializeChat(), 5000); // 5초 후 재연결 시도
+      setTimeout(() => setupWebSocket(), 5000); // 5초 후 재연결 시도
     } else {
       console.log("WebSocket connection closed during logout.");
     }
   };
+}
+/**
+ * 이벤트 리스너를 설정하는 함수입니다.
+ */
+function setupEventListeners() {
+  const chatInput = document.querySelector("#chat-input");
+  const chatSend = document.querySelector("#chat-send");
 
-  document.querySelector("#chat-input").focus();
-  document.querySelector("#chat-input").onkeyup = function (e) {
-    if (e.keyCode === 13) {
-      // enter, return
-      document.querySelector("#chat-send").click();
+  chatInput.addEventListener("keyup", function (e) {
+    if (e.key === "Enter") {
+      chatSend.click();
     }
+  });
+
+  chatSend.addEventListener("click", sendMessage);
+}
+
+/**
+ * 메시지를 전송하는 함수입니다.
+ */
+async function sendMessage() {
+  const messageInputDom = document.querySelector("#chat-input");
+  let message = messageInputDom.value;
+  const username = await getUsername();
+
+  // 특수 명령어 처리
+  if (await handleSpecialCommands(message, username)) {
+    messageInputDom.value = "";
+    return;
+  }
+
+  // 일반 메시지 전송
+  let to_username = "everyone";
+  let whisper = false;
+
+  // 귓속말 처리
+  if (message.startsWith("/w ")) {
+    const parts = message.split(" ");
+    if (parts.length >= 3) {
+      to_username = parts[1];
+      message = parts.slice(2).join(" ");
+      whisper = true;
+    }
+  }
+
+  chatSocket.send(
+    JSON.stringify({
+      message: message,
+      username: username,
+      to_username: to_username,
+      whisper: whisper,
+    })
+  );
+
+  messageInputDom.value = "";
+  console.log("Message sent successfully.");
+}
+
+/**
+ * 특수 명령어를 처리하는 함수입니다.
+ * @param {string} message - 입력된 메시지
+ * @param {string} username - 현재 사용자 이름
+ * @returns {boolean} - 특수 명령어가 처리되었는지 여부
+ */
+async function handleSpecialCommands(message, username) {
+  const commands = {
+    "/befriend": { action: "add", func: manageFriend },
+    "/unfriend": { action: "remove", func: manageFriend },
+    "/mute": { action: "mute", func: manageMute },
+    "/unmute": { action: "unmute", func: manageMute },
+    "/profile": { action: "view", func: getOtherUserProfile },
   };
-  document.querySelector("#chat-send").onclick = function (e) {
-    const messageInputDom = document.querySelector("#chat-input");
-    let message = messageInputDom.value; // const를 let으로 변경
-    const username = localStorage.getItem("username");
 
-    document.querySelector("#chat-send").onclick = async function (e) {
-      const messageInputDom = document.querySelector("#chat-input");
-      let message = messageInputDom.value;
-      const username = localStorage.getItem("username");
-
-      // 친구 추가 명령어 처리
-      if (message.startsWith("/befriend ")) {
-        const userToAdd = message.split(" ")[1];
-        manageFriend(userToAdd, "add").then((result) => {
-          displayMessage({
-            message: result.detail,
-            username: "System",
-          });
-        });
-        messageInputDom.value = "";
-        return;
-      }
-
-      // 친구 삭제 명령어 처리
-      if (message.startsWith("/unfriend ")) {
-        const userToRemove = message.split(" ")[1];
-        manageFriend(userToRemove, "remove").then((result) => {
-          displayMessage({
-            message: result.detail,
-            username: "System",
-          });
-        });
-        messageInputDom.value = "";
-        return;
-      }
-
-      // 차단 명령어 처리
-      if (message.startsWith("/mute ")) {
-        const userToMute = message.split(" ")[1];
-        manageMute(userToMute, "mute").then((result) => {
-          displayMessage({
-            message: result.detail,
-            username: "System",
-          });
-        });
-        messageInputDom.value = "";
-        return;
-      }
-
-      // 차단 해제 명령어 처리
-      if (message.startsWith("/unmute ")) {
-        const userToUnmute = message.split(" ")[1];
-        manageMute(userToUnmute, "unmute").then((result) => {
-          displayMessage({
-            message: result.detail,
-            username: "System",
-          });
-        });
-        messageInputDom.value = "";
-        return;
-      }
-      let to_username = "everyone";
-      let whisper = false;
-      // 귓속말 처리
-      if (message.startsWith("/w ")) {
-        const parts = message.split(" ");
-        if (parts.length >= 3) {
-          to_username = parts[1];
-          message = parts.slice(2).join(" "); // 여기서 message를 재할당
-          whisper = true;
-        }
-      }
-      // profile 명령어 처리
-      if (message.startsWith("/profile ")) {
-        const userToView = message.split(" ")[1];
-        const profile = await getOtherUserProfile(userToView);
-        if (profile) {
-          displayUserProfile(profile);
-        } else {
-          displayMessage({
-            message: `Failed to fetch profile for user ${userToView}`,
-            username: "System",
-          });
-        }
-        messageInputDom.value = "";
-        return;
-      }
-      if (message.startsWith("/")) {
+  for (const [command, { action, func }] of Object.entries(commands)) {
+    if (message.startsWith(command + " ")) {
+      const targetUser = message.split(" ")[1];
+      const result = await func(targetUser, action);
+      if (command === "/profile") {
+        result
+          ? displayUserProfile(result)
+          : displayMessage({
+              message: `Failed to fetch profile for user ${targetUser}`,
+              username: "System",
+            });
+      } else {
         displayMessage({
-          message: `/w, /befriend, /unfriend, /mute, /unmute, /profile 명령어를 사용할 수 있습니다.`,
+          message: result.detail,
           username: "System",
         });
       }
+      return true;
+    }
+  }
 
-      console.log("Sending message:", message);
-      console.log("From user:", username);
-      console.log("To user:", to_username);
+  if (message.startsWith("/") && !message.startsWith("/w")) {
+    displayMessage({
+      message: `/w, /befriend, /unfriend, /mute, /unmute, /profile 명령어를 사용할 수 있습니다.`,
+      username: "System",
+    });
+    return true;
+  }
 
-      chatSocket.send(
-        JSON.stringify({
-          message: message,
-          username: username,
-          to_username: to_username,
-          whisper: whisper,
-        })
-      );
-
-      messageInputDom.value = "";
-      console.log("Message sent successfully.");
-      // // 모든 채팅 활동 후 이벤트 발생 home.js에서 이벤트를 수신하여 사용자 목록을 업데이트합니다.
-      // document.dispatchEvent(new Event("chatActionPerformed"));
-    };
-  };
+  return false;
 }
-function displayMessage(data) {
+
+/**
+ * 메시지를 화면에 표시하는 함수입니다.
+ * @param {Object} data - 표시할 메시지 데이터
+ */
+async function displayMessage(data) {
   const chatBox = document.querySelector("#chat-box");
   const chatMessages = document.querySelector("#chat-messages");
-  console.log("displayMessage", data);
-
-  if (data.whisper == true) {
-    console.log("Display whisper msg");
-    if (
-      data.to_username === localStorage.getItem("username") ||
-      data.username === localStorage.getItem("username")
-    ) {
+  const username = await getUsername();
+  if (data.whisper) {
+    if (data.to_username === username || data.username === username) {
       chatBox.innerHTML += `<div>(Whisper) ${data.username} to ${data.to_username}: ${data.message}</div>`;
     }
   } else {
     chatBox.innerHTML += `<div>${data.username}: ${data.message}</div>`;
   }
 
-  // 새 메시지가 추가된 후 스크롤을 가장 아래로 이동
+  // 스크롤 처리
   chatMessages.scrollTop = chatMessages.scrollHeight;
 
-  // 스크롤이 맨 아래에 있는지 확인
-  const isScrolledToBottom =
-    chatMessages.scrollHeight - chatMessages.clientHeight <=
-    chatMessages.scrollTop + 1;
-
-  // 새 메시지가 추가되면 자동으로 스크롤
-  if (isScrolledToBottom) {
-    chatMessages.scrollTop =
-      chatMessages.scrollHeight - chatMessages.clientHeight;
-  }
-
-  // 모든 채팅 활동 후 이벤트 발생 home.js에서 이벤트를 수신하여 사용자 목록을 업데이트합니다.
+  // 채팅 활동 이벤트 발생
   document.dispatchEvent(new Event("chatActionPerformed"));
 }
 
-// view other profile
+/**
+ * 사용자 프로필을 화면에 표시하는 함수입니다.
+ * @param {Object} profile - 표시할 사용자 프로필 데이터
+ */
 function displayUserProfile(profile) {
   const profileContainer = document.createElement("div");
   profileContainer.id = "user-profile-container";

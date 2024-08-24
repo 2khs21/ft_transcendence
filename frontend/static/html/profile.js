@@ -1,5 +1,24 @@
 //profile.js
-import { getCookie } from "./app.js";
+
+async function fetchUsername() {
+  try {
+    const profileData = await fetchProfileData();
+    if (profileData && profileData.username) {
+      return profileData.username;
+    } else {
+      throw new Error("Username not found in the profile data");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    return null;
+  }
+}
+export async function getUsername() {
+  let username = await fetchUsername();
+  return username;
+  // console.log("Username:", username);
+  // 여기서 username을 사용할 수 있습니다.
+}
 
 async function fetchProfileData() {
   try {
@@ -8,7 +27,9 @@ async function fetchProfileData() {
         Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
       },
     });
-    if (!response.ok) throw new Error("Failed to fetch profile data");
+    if (!response.ok) {
+      throw new Error("Failed to fetch profile data");
+    }
     return await response.json();
   } catch (error) {
     console.error("Error:", error);
@@ -21,7 +42,7 @@ async function updateProfile(formData) {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        "X-CSRFToken": getCookie("csrftoken"),
+        // "X-CSRFToken": getCookie("csrftoken"),
       },
       body: formData,
     });
@@ -35,6 +56,7 @@ async function updateProfile(formData) {
     throw error;
   }
 }
+
 export async function renderProfile(container) {
   const profile = await fetchProfileData();
   if (!profile) {
