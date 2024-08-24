@@ -62,22 +62,6 @@ services:
       - ./frontend/static/images:/usr/share/nginx/images
       - ./backend/media:/usr/share/nginx/media # 미디어 파일을 위한 볼륨 추가
 
-  gameserver:
-    container_name: gameserver
-    image: server:transcendence
-    pull_policy: never
-    expose:
-      - 9180
-    build:
-      context: ./PongServer/
-      dockerfile: ./Dockerfile
-    env_file:
-      - ".env"
-    command: /code/server.out
-    restart: unless-stopped
-    networks:
-      - intra
-
 networks:
   intra:
     driver: bridge
