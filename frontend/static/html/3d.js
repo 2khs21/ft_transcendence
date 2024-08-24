@@ -13,123 +13,134 @@ import { FontLoader } from 'FontLoader';
 import { TextGeometry } from 'TextGeometry';
 
 import { authState } from "./app.js";
+// import { MathUtils } from 'MathUtils';
 
 // official board size
 const boardWidth = 300;
 const boardHeight = 400;
-const winScore = 5;
+const winScore = 3;
 const gameTime = 300;
-const ballSpeed = 1.0;
+const ballSpeed = 2.0;
 const ballRadius = 10;
-const paddleSpeed = 1.0;
-const udpPort = 9981;
+const paddleSpeed = 2.0;
 
+let player1Score = 0;
+let player2Score = 0;
+
+let isPaddleMovable = false;
+let isBallMovable = false;
+
+let isP1MovingLeft = false;
+let isP1MovingRight = false;
+let isP2MovingLeft = false;
+let isP2MovingRight = false;
+
+
+let ballDirection = new THREE.Vector2(1, 1);
+
+const keysPressed = {};
+
+let scene;
 export function renderGame() {
     init();
 }
 export function removeGame() {
+    while (scene.children.length > 0) {
+        scene.remove(scene.children[0]);
+    }
+
     const app = document.getElementById('app');
     while (app.firstChild) {
         app.removeChild(app.firstChild);
     }
 }
 
-function restartGame() {
-    removeGame();
-    init();
-}
-
-const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-
-let gameSocket = new WebSocket(
-    // TODO : ws to wss
-    `${protocol}${window.location.hostname}/ws/game/`
-);
-
 var username = localStorage.getItem("username");
-
-
-// ------------- Django - Browser communication main logic -------------
-gameSocket.onmessage = function (event) {
-    console.log("getting message from server");
-};
-// ---------------------------------------------------------------------
-
-gameSocket.onopen = function (event) {
-    console.log("Connected to Websocket Game Server");
-};
-
-gameSocket.onclose = function () {
-    console.log("Game Websocket closed, Disconnected from Game Server");
-};
-
-gameSocket.onerror = function (error) {
-    if (authState.isLoggedIn == true) {
-        console.error("Game socket closed unexpectedly reason : " + error);
-        setTimeout(() => restartGame(), 5000);
-    } else {
-        console.log("WebSocket connection closed during logout.");
-    }
-};
-
-// django server와 통신하기 위한 query_id
-function createGameSession(roomName) {
-    const message = {
-        type: create_game_session,
-        room_name: roomName
-    };
-    gameSocket.send(JSON.stringify(message));
+var opponent = localStorage.getItem("opponent");
+if (opponent == null) {
+    opponent = "Faker";
 }
-
-function startGameRound(roomNmae) {
-    const message = {
-        type: start_game_round,
-        room_name: roomName
-    };
-    gameSocket.send(JSON.stringify(message));
-}
-
-function matchDual() {
-    const message = {
-        type: match_dual,
-    };
-    gameSocket.send(JSON.stringify(message));
-}
-
-function matchTournament() {
-    const message = {
-        type: match_tournament,
-    };
-    gameSocket.send(JSON.stringify(message));
-}
+var tournamentP1 = localStorage.getItem("tournamentP1");
+var tournamentP2 = localStorage.getItem("tournamentP2");
+var tournamentP3 = localStorage.getItem("tournamentP3");
+var tournamentP4 = localStorage.getItem("tournamentP4");
 
 
 /* --------------------- THREE.js game logic starts --------------------- */
 
-
 // 씬 만들기
 export function init() {
-    
+
     if (WebGL.isWebGLAvailable()) {
-        gameSocket = new WebSocket(
-            // TODO : ws to wss
-            `${protocol}${window.location.hostname}/ws/game/`
-        );
-        gameSocket.binaryType = 'arraybuffer';
-        
-        const scene = new THREE.Scene();
-        const gui = new GUI();
+        player1Score = 0;
+        player2Score = 0;
+        isPaddleMovable = false;
+        isBallMovable = false;
+        ballDirection.set(0, 0);
+
+        scene = new THREE.Scene();
+        // const gui = new GUI();
         //textGeometry를 담을 배열
-        
+
         // for raycasting
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
         let SELECTED;
-        
+
         let raycastArray = new Array(2);
-        let scoreArray = new Array();
+        let textArray = new Array();
         // let raycastMesh, raycastLine;
-        
+
+        function removeText() {
+            for (let i = 0; i < textArray.length; i++) {
+                scene.remove(textArray[i]);
+            }
+        }
+
+        function startDualRound() {
+            if (player1Score >= winScore || player2Score >= winScore) {
+                if (player1Score > player2Score) {
+                    createText(username + "승리!", 20, new THREE.Vector3(50, 0, 100), textRotation, scene, 0xFF8FF0);
+                    resetBoard();
+                    removeText();
+                } else {
+                    createText(opponent + "승리!", 20, new THREE.Vector3(50, 0, 100), textRotation, scene, 0xFF8FF0);
+                    resetBoard();
+                    removeText();
+                }
+                setTimeout(() => {
+                    // sendResult();
+                    resetBoard();
+                    removeText();
+                    addScores(0, 0);
+                    player1Score = 0;
+                    player2Score = 0;
+
+                    createText("듀얼", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xB38FF0);
+                    createText("토너먼트", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xB38FF0);
+                }, 3000);
+
+                return 0;
+            }
+            resetBoard();
+
+            isPaddleMovable = true;
+            isBallMovable = true;
+
+            const randomDirection = new THREE.Vector2();
+            // X자가 뻗는 네 방향 중 하나
+            randomDirection.x = Math.random() > 0.5 ? 1 : -1;
+            randomDirection.y = Math.random() > 0.5 ? 1 : -1;
+
+
+            ballDirection.set(randomDirection.x, randomDirection.y);
+        }
+
+        function setPlayerName() {
+            let player1Name = localStorage.getItem("username");
+            let player2Name = localStorage.getItem("opponent");
+        }
+
 
         // 카메라 만들기 (FoV, aspect ratio, near clipping plane, far clipping plane );
         // window.innerWidth / window.innerHeight 은 화면의 비율 (aspect ratio)
@@ -161,7 +172,7 @@ export function init() {
             document.getElementById('app').appendChild(renderer.domElement);
             document.getElementById('app').children[0].id = 'pong';
         }
-        let container = document.getElementById( 'pong' );
+        let container = document.getElementById('pong');
 
         const ambientLightColor = 0x404040;
         const ambientLightIntensity = 10;
@@ -369,9 +380,9 @@ void main()
         });
 
         // Mesh가 필요
-        const enemyPaddle = new THREE.Mesh(enemyPaddleGeometry, enemyPaddleMaterial);
-        enemyPaddle.castShadow = true;
-        enemyPaddle.position.set(0, boardHeight / 2, playerPaddleSizeZ / 2);
+        const p2Paddle = new THREE.Mesh(enemyPaddleGeometry, enemyPaddleMaterial);
+        p2Paddle.castShadow = true;
+        p2Paddle.position.set(0, boardHeight / 2, playerPaddleSizeZ / 2);
 
         const myPaddleGeometry = new RoundedBoxGeometry(playerPaddleSizeX, playerPaddleSizeY, playerPaddleSizeZ, 20, 20);
         const myPaddleMaterial = new THREE.MeshPhysicalMaterial({
@@ -386,13 +397,13 @@ void main()
 
         });
 
-        const myPaddle = new THREE.Mesh(myPaddleGeometry, myPaddleMaterial);
-        myPaddle.position.set(0, -boardHeight / 2, playerPaddleSizeZ / 2);
-        myPaddle.castShadow = true;
+        const p1Paddle = new THREE.Mesh(myPaddleGeometry, myPaddleMaterial);
+        p1Paddle.position.set(0, -boardHeight / 2, playerPaddleSizeZ / 2);
+        p1Paddle.castShadow = true;
 
         // 0, 0, 0에 add됨
-        scene.add(myPaddle);
-        scene.add(enemyPaddle);
+        scene.add(p1Paddle);
+        scene.add(p2Paddle);
 
         // board 상하좌우 bars
         const verticalBarGeometry = new RoundedBoxGeometry(25, boardHeight + 20, 100, 20, 20);
@@ -462,8 +473,6 @@ void main()
 
                 const revMessage = message.split("").reverse().join("  ");
 
-                console.log(revMessage);
-
                 const geometry = new TextGeometry(revMessage, {
                     font: font,
                     size: size,
@@ -497,13 +506,9 @@ void main()
                 }
                 else if (message === "토너먼트") {
                     raycastArray[1] = text;
-                } 
-                // 메시지가 숫자일 경우
-                else if (!isNaN(message)) {
-                    scoreArray.push(text);
                 }
-
-
+                
+                textArray.push(text);
                 scene.add(text);
 
             }
@@ -532,65 +537,205 @@ void main()
 
         addScores(0, 0);
 
-        // 흠......
         createText("듀얼", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xB38FF0);
         createText("토너먼트", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xB38FF0);
 
 
         // gui용
-        const options = {
-            BallPositionX: 0,
-            BallPositionY: 0,
+        // const options = {
+        //     BallPositionX: 0,
+        //     BallPositionY: 0,
 
-            // boardWidth: 828,
-            // boardHeight: 525,
-        };
+        //     // boardWidth: 828,
+        //     // boardHeight: 525,
+        // };
 
-        gui.add(options, "BallPositionX", -boardWidth / 2, boardWidth / 2, 1).onChange((val) => {
-            ball.position.setX(val);
-        });
-        gui.add(options, "BallPositionY", -boardHeight / 2, boardHeight / 2, 1).onChange((val) => {
-            ball.position.setY(val);
-        });
+        // gui.add(options, "BallPositionX", -boardWidth / 2, boardWidth / 2, 1).onChange((val) => {
+        //     ball.position.setX(val);
+        // });
+        // gui.add(options, "BallPositionY", -boardHeight / 2, boardHeight / 2, 1).onChange((val) => {
+        //     ball.position.setY(val);
+        // });
 
 
         window.addEventListener('resize', onWindowResize);
-        container.addEventListener( 'mousemove', onDocumentMouseMove, false );
-        container.addEventListener( 'mousedown', onDocumentMouseDown, false );
-        container.addEventListener( 'resize', onWindowResize, false );
+        container.addEventListener('mousemove', onDocumentMouseMove, false);
+        container.addEventListener('mousedown', onDocumentMouseDown, false);
+        container.addEventListener('resize', onWindowResize, false);
+        document.addEventListener(
+            "keydown",
+            (event) => {
+                // 눌린 키를 기록 (true 상태로 설정)
+                const keyName = event.key;
+                keysPressed[keyName] = true;
+
+                if (keysPressed['a']) {
+                    isP1MovingLeft = true;
+                }
+                else if (keysPressed['d']) {
+                    isP1MovingRight = true;
+                }
+                else if (keysPressed['j']) {
+                    isP2MovingLeft = true;
+                }
+                else if (keysPressed['l']) {
+                    isP2MovingRight = true;
+                }
+                else if (keysPressed['a'] && keysPressed['j']) {
+                    isP1MovingLeft = true;
+                    isP2MovingLeft = true;
+                }
+                else if (keysPressed['d'] && keysPressed['l']) {
+                    isP1MovingRight = true;
+                    isP2MovingRight = true;
+                }
+                else if (keysPressed['a'] && keysPressed['l']) {
+                    isP1MovingLeft = true;
+                    isP2MovingRight = true;
+                }
+                else if (keysPressed['d'] && keysPressed['j']) {
+                    isP1MovingRight = true;
+                    isP2MovingLeft = true;
+                }
+
+                // switch (keyName) {
+                //     case 'a':
+                //         isP1MovingLeft = true;
+                //         break;
+                //     case 'd':
+                //         isP1MovingRight = true;
+                //         break;
+
+                //     // arrow keys
+                //     case 'j':
+                //         isP2MovingLeft = true;
+                //     case 'l':
+                //         isP2MovingRight = true;
+                //         break;
+                //     // case 'right':
+                //     //     enemyPaddle.position.x += paddleSpeed;
+                //     //     break;
+                //     // case 'left':
+                //     //     enemyPaddle.position.x -= paddleSpeed;
+                //     //     break;
+                // }
+
+            },
+            false,
+        );
+        document.addEventListener(
+            "keyup",
+
+            (event) => {
+                // 떼어진 키를 기록 (false 상태로 설정)
+                keysPressed[event.key] = false;
+
+                if (event.key === 'a') {
+                    isP1MovingLeft = false;
+                }
+                else if (event.key === 'd') {
+                    isP1MovingRight = false;
+                }
+                else if (event.key === 'j') {
+                    isP2MovingLeft = false;
+                }
+                else if (event.key === 'l') {
+                    isP2MovingRight = false;
+                }
+            },
+            false,
+        );
 
         function animate() {
 
             backgroundShader.uniforms.iTime.value += 0.0125;
-            // find intersections
 
-            raycaster.setFromCamera(pointer, camera);
 
-            let intersects = raycaster.intersectObjects(scene.children);
-
-            if (intersects.length > 0) {
-                if (SELECTED != intersects[0].object) {
-
-                    // 듀얼, 토너먼트 클릭 시 동작
-                    if (SELECTED && SELECTED.material.emissive) {
-                        SELECTED.material.emissive.setHex( SELECTED.currentHex );
-                    }
-
-                    SELECTED = intersects[0].object;
-                    if (SELECTED && SELECTED.material.emissive && (SELECTED == raycastArray[0] || SELECTED == raycastArray[1])) {
-                        SELECTED.currentHex = SELECTED.material.emissive.getHex();
-                        SELECTED.material.emissive.setHex(0xff0000);
-                    }
-                    container.style.cursor = 'pointer';
-
-                }
+            if (isPaddleMovable && isP1MovingLeft && p1Paddle.position.x > -boardWidth / 2 + playerPaddleSizeX / 2) {
+                p1Paddle.position.x -= paddleSpeed;
             }
-            else {
-                if (SELECTED) {
-                    if (SELECTED.material.emissive)
-                        SELECTED.material.emissive.setHex(SELECTED.currentHex);
-                    SELECTED = null;
-                    container.style.cursor = 'auto';
+            if (isPaddleMovable && isP1MovingRight && p1Paddle.position.x < boardWidth / 2 - playerPaddleSizeX / 2) {
+                p1Paddle.position.x += paddleSpeed;
+            }
+            if (isPaddleMovable && isP2MovingLeft && p2Paddle.position.x > -boardWidth / 2 + playerPaddleSizeX / 2) {
+                p2Paddle.position.x -= paddleSpeed;
+            }
+            if (isPaddleMovable && isP2MovingRight && p2Paddle.position.x < boardWidth / 2 - playerPaddleSizeX / 2) {
+                p2Paddle.position.x += paddleSpeed;
+            }
+
+            if (isBallMovable) {
+                ball.position.x += ballDirection.x * ballSpeed;
+                ball.position.y += ballDirection.y * ballSpeed;
+            }
+
+            // ball hits the wall
+            if (ball.position.x > boardWidth / 2 - ballRadius || ball.position.x < -boardWidth / 2 + ballRadius) {
+                ballDirection.x = -ballDirection.x;
+            }
+
+            // when ball hits the paddle
+            if (ball.position.y > boardHeight / 2 - ballRadius - playerPaddleSizeY / 2 && ball.position.x < p2Paddle.position.x + playerPaddleSizeX / 2 && ball.position.x > p2Paddle.position.x - playerPaddleSizeX / 2) {
+                calculateBallDirection(p2Paddle, ball);
+            }
+            if (ball.position.y < -boardHeight / 2 + ballRadius + playerPaddleSizeY / 2 && ball.position.x < p1Paddle.position.x + playerPaddleSizeX / 2 && ball.position.x > p1Paddle.position.x - playerPaddleSizeX / 2) {
+                calculateBallDirection(p1Paddle, ball);
+            }
+
+
+            if (ball.position.y > boardHeight / 2) {
+                player1Score += 1;
+                removeText();
+                addScores(player1Score, player2Score);
+                resetBoard();
+                setTimeout(() => {
+                    startDualRound();
+                }
+                    , 1000);
+            }
+            if (ball.position.y < -boardHeight / 2) {
+                player2Score += 1;
+                removeText();
+                addScores(player1Score, player2Score);
+                resetBoard();
+                setTimeout(() => {
+                    startDualRound();
+                }
+                    , 1000);
+            }
+
+
+            // 게임중일 때 레이캐스트 최적화
+            if (!isPaddleMovable || !isBallMovable) {
+                // find intersections
+                raycaster.setFromCamera(pointer, camera);
+
+                let intersects = raycaster.intersectObjects(scene.children);
+
+                if (intersects.length > 0) {
+                    if (SELECTED != intersects[0].object) {
+
+                        // 듀얼, 토너먼트 클릭 시 동작
+                        if (SELECTED && SELECTED.material.emissive) {
+                            SELECTED.material.emissive.setHex(SELECTED.currentHex);
+                        }
+
+                        SELECTED = intersects[0].object;
+                        if (SELECTED && SELECTED.material.emissive && (SELECTED == raycastArray[0] || SELECTED == raycastArray[1])) {
+                            SELECTED.currentHex = SELECTED.material.emissive.getHex();
+                            SELECTED.material.emissive.setHex(0xff0000);
+                        }
+                        container.style.cursor = 'pointer';
+
+                    }
+                }
+                else {
+                    if (SELECTED) {
+                        if (SELECTED.material.emissive)
+                            SELECTED.material.emissive.setHex(SELECTED.currentHex);
+                        SELECTED = null;
+                        container.style.cursor = 'auto';
+                    }
                 }
             }
 
@@ -607,77 +752,65 @@ void main()
 
         }
 
-        document.onkeydown = function (e) {
-            handleKeyInput(e.key, 1);
-        }
-
-        document.onkeyup = function (e) {
-            handleKeyInput(e.key, 2);
-        }
-
-        function handleKeyInput(key, inputType) {
-            const queryID = 301;
-            const sessionID = 1;  // This should be the actual session ID
-            const playerID = 1;   // 1 for Player A, 2 for Player B
-            let inputKey;
-
-            switch (key) {
-                case "ArrowLeft":
-                    inputKey = 1;
-                    break;
-                case "ArrowRight":
-                    inputKey = 2;
-                    break;
-                default:
-                    inputKey = 0;
-            }
-
-            const message = {
-                query_id: queryID,
-                session_id: sessionID,
-                player_id: playerID,
-                input_key: inputKey,
-                input_type: inputType
-            };
-            if (gameSocket.readyState === WebSocket.OPEN)
-                gameSocket.send(JSON.stringify(message));
-        }
-
-        function onDocumentMouseMove( event ) {
+        function onDocumentMouseMove(event) {
 
             event.preventDefault();
-    
+
             let gapX = event.clientX - event.offsetX;
             let gapY = event.clientY - event.offsetY;
-            
-            pointer.x = ((event.clientX - gapX)/( container.clientWidth )) * 2 - 1;
-            pointer.y = -((event.clientY - gapY)/( container.clientHeight )) * 2 + 1;
-    
+
+            pointer.x = ((event.clientX - gapX) / (container.clientWidth)) * 2 - 1;
+            pointer.y = -((event.clientY - gapY) / (container.clientHeight)) * 2 + 1;
+
         }
 
         // 듀얼과 토너먼트 클릭 시 이벤트
-        function onDocumentMouseDown( event ) {
+        function onDocumentMouseDown(event) {
 
             event.preventDefault();
-            if ( SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[0]) {
+            if (SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[0]) {
                 console.log("clicked Dual");
                 scene.remove(raycastArray[0]);
                 scene.remove(raycastArray[1]);
 
-                createText("매칭!", 20, new THREE.Vector3(20, -100, 100), textRotation, scene, 0xB38FF0);
+                startDualRound();
 
-                matchDual();
 
-            } else if ( SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[1]) {
+            } else if (SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[1]) {
                 console.log("clicked Tournament");
                 scene.remove(raycastArray[0]);
                 scene.remove(raycastArray[1]);
 
-                createText("매칭!", 20, new THREE.Vector3(20, -100, 100), textRotation, scene, 0xB38FF0);
+                startTournament();
 
-                matchTournament();
             }
-    
+        }
+
+        function resetBoard() {
+            p1Paddle.position.set(0, -boardHeight / 2, 10);
+            p2Paddle.position.set(0, boardHeight / 2, 10);
+            ball.position.set(0, 0, 10);
+            ballDirection.set(0, 0);
+            isBallMovable = false;
+            isPaddleMovable = false;
+        }
+
+        // if ball hits the edge of the paddle, change the direction of the ball based on the paddle's position
+        function calculateBallDirection(paddle, ball) {
+            const paddleCenter = paddle.position.x;
+            const ballCenter = ball.position.x;
+
+            const diff = ballCenter - paddleCenter;
+
+            // Math.PI
+            ballDirection.x = Math.sin(diff / (playerPaddleSizeX / 2) * Math.PI / 2);
+            ballDirection.y = -ballDirection.y;
+            if (ballDirection.y < 0) {
+                ballDirection.y = -1;
+            }
+            else {
+                ballDirection.y = 1;
+            }
         }
 
     } else {
