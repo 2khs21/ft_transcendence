@@ -214,10 +214,10 @@ async function displayMessage(data) {
   const username = await getUsername();
   if (data.whisper) {
     if (data.to_username === username || data.username === username) {
-      chatBox.innerHTML += `<div>(Whisper) ${data.username} to ${data.to_username}: ${data.message}</div>`;
+      chatBox.innerHTML += `<div class="text-white">(Whisper) ${data.username} to ${data.to_username}: ${data.message}</div>`;
     }
   } else {
-    chatBox.innerHTML += `<div>${data.username}: ${data.message}</div>`;
+    chatBox.innerHTML += `<div class="text-white">${data.username}: ${data.message}</div>`;
   }
 
   // 스크롤 처리
@@ -238,10 +238,10 @@ function displayUserProfile(profile) {
     <img src="${
       profile.profile_image_url
     }" alt="Profile Image" style="width: 100px; height: 100px;">
-    <p>Username: ${profile.username}</p>
-    <p>Email: ${profile.email}</p>
-    <p>Status: ${profile.status_message || "No status message"}</p>
-    <button id="close-profile">X</button>
+    <p class="text-white">Username: ${profile.username}</p>
+    <p class="text-white">Email: ${profile.email}</p>
+    <p class="text-white">Status: ${profile.status_message || "No status message"}</p>
+    <button id="close-profile" class="text-white">X</button>
   `;
   document.body.appendChild(profileContainer);
 
