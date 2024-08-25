@@ -6,7 +6,8 @@ class User(AbstractUser):
     ############### profile ###############
     status_message = models.CharField(max_length=100, blank=True)
     profile_image = models.ImageField(upload_to='profile_images/', blank=True, null=True) 
-    
+    is_email_verified = models.BooleanField(default=False)
+
     def get_profile_image_url(self):
         if self.profile_image:
             return self.profile_image.url
@@ -92,6 +93,23 @@ class User(AbstractUser):
         """주어진 사용자가 친구인지 확인합니다."""
         return self.friends.filter(pk=user.pk).exists()
     
+# ################ email 인증 ################
+from django.db import models
+from django.contrib.auth import get_user_model
+import random
+import string
+
+User = get_user_model()
+
+class EmailVerification(models.Model):
+    email = models.EmailField(unique=True)  # 이메일 필드 추가
+    verification_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+
+    @classmethod
+    def generate_verification_code(cls):
+        return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
 ################ record ################
 
@@ -99,10 +117,6 @@ class PongRecord(models.Model):
     # 승자와 패자를 User 모델과 연결합니다.
     winner = models.ForeignKey(User, related_name='won_games', on_delete=models.CASCADE)
     loser = models.ForeignKey(User, related_name='lost_games', on_delete=models.CASCADE)
-    
-    # 점수를 저장합니다.
-    winner_score = models.IntegerField()
-    loser_score = models.IntegerField()
     
     # 게임이 끝난 시간을 자동으로 저장합니다.
     end_time = models.DateTimeField(auto_now_add=True)

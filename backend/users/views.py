@@ -12,29 +12,202 @@ logger = logging.getLogger(__name__)
 from django.contrib.auth import get_user_model
 User = get_user_model()  # 현재 프로젝트의 User 모델을 가져옵니다.
 
-class RegisterView(generics.CreateAPIView):
-	# CreateAPIView : POST 요청에 대해 create 메서드를 호출하여 새로운 리소스를 생성
-	queryset = User.objects.all()
-	serializer_class = RegisterSerializer
 
-# class LoginView(generics.GenericAPIView):
-# 	serializer_class = LoginSerializer
 
-# 	def post(self, request):
-# 		serializer = self.get_serializer(data=request.data)
-# 		serializer.is_valid(raise_exception=True)
-# 		token = serializer.validated_data['token'] #validate()의 리턴값인 Token을 받아옴.
-# 		return Response({"token": token.key}, status=status.HTTP_200_OK)
-	
-class LoginView(generics.GenericAPIView):
-    serializer_class = LoginSerializer
+########### 2FA email ############
+# from django.core.mail import send_mail
+# from django.conf import settings
+# from rest_framework import status
+# from rest_framework.response import Response
+# from rest_framework.views import APIView
+# from .models import EmailVerification, User
+# from django.contrib.auth import authenticate
+# from .serializers import RegisterSerializer, LoginSerializer, EmailVerificationSerializer
+# from django.core.validators import validate_email
+# from django.core.exceptions import ValidationError
 
+
+from django.core.mail import send_mail
+from django.conf import settings
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .models import EmailVerification, User
+from .serializers import RegisterSerializer, EmailVerificationSerializer
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+
+
+class SendVerificationEmailView(APIView):
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        token = serializer.validated_data['token']  # validate()의 리턴값인 토큰 키를 받아옴.
-        return Response({"token": token}, status=status.HTTP_200_OK)
-    
+        email = request.data.get('email')
+        
+        if not email:
+            return Response({"detail": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            validate_email(email)
+            
+            if User.objects.filter(email=email).exists():
+                return Response({"detail": "A user with that email already exists."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            verification_code = EmailVerification.generate_verification_code()
+            EmailVerification.objects.update_or_create(
+                email=email,
+                defaults={'verification_code': verification_code, 'is_verified': False}
+            )
+            
+            self.send_verification_email(email, verification_code)
+            
+            return Response({"detail": "Verification email sent"}, status=status.HTTP_200_OK)
+        
+        except ValidationError:
+            return Response({"detail": "Invalid email address"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def send_verification_email(self, email, code):
+        subject = 'Email Verification Code'
+        message = f'Your verification code is: {code}'
+        send_mail(subject, message, settings.EMAIL_HOST_USER, [email])
+
+class VerifyEmailView(APIView):
+    def post(self, request):
+        serializer = EmailVerificationSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            code = serializer.validated_data['code']
+            
+            try:
+                verification = EmailVerification.objects.get(email=email, verification_code=code)
+                if verification.is_verified:
+                    return Response({"detail": "Email already verified"}, status=status.HTTP_400_BAD_REQUEST)
+                
+                verification.is_verified = True
+                verification.save()
+                
+                return Response({"detail": "Email verified successfully"}, status=status.HTTP_200_OK)
+            
+            except EmailVerification.DoesNotExist:
+                return Response({"detail": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class RegisterView(APIView):
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            
+            try:
+                verification = EmailVerification.objects.get(email=email, is_verified=True)
+            except EmailVerification.DoesNotExist:
+                return Response({"detail": "Email not verified"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            user = serializer.save()
+            verification.delete()  # 인증 정보 삭제
+            
+            return Response({"detail": "User registered successfully"}, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+import random
+import string
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import authenticate
+from .models import EmailVerification
+from .serializers import LoginSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+import random
+import string
+class LoginView(APIView):
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if not username or not password:
+            return Response({"detail": "Both username and password are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = authenticate(username=username, password=password)
+
+        if user is None:
+            return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # 이메일 인증 확인 로직 제거
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'username': user.username,
+            'email': user.email
+        }, status=status.HTTP_200_OK)
+
+# class VerifyLoginView(APIView):
+#     def post(self, request):
+#         username = request.data.get('username')
+#         email = request.data.get('email')
+#         code = request.data.get('code')
+
+#         if not all([username, email, code]):
+#             return Response({"detail": "Username, email and verification code are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         try:
+#             user = User.objects.get(username=username, email=email)
+#             verification = EmailVerification.objects.get(user=user, verification_code=code)
+            
+#             if not verification.is_verified:
+#                 verification.is_verified = True
+#                 verification.save()
+#                 user.is_email_verified = True
+#                 user.save()
+
+#                 refresh = RefreshToken.for_user(user)
+#                 return Response({
+#                     'refresh': str(refresh),
+#                     'access': str(refresh.access_token),
+#                     'username': user.username,
+#                     'email': user.email
+#                 }, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({"detail": "Email already verified"}, status=status.HTTP_400_BAD_REQUEST)
+#         except User.DoesNotExist:
+#             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+#         except EmailVerification.DoesNotExist:
+#             return Response({"detail": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
+        
+# class ResendVerificationView(APIView):
+#     def post(self, request):
+#         username = request.data.get('username')
+#         email = request.data.get('email')
+
+#         if not username or not email:
+#             return Response({"detail": "Both username and email are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         try:
+#             user = User.objects.get(username=username, email=email)
+#         except User.DoesNotExist:
+#             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+#         if user.is_email_verified:
+#             return Response({"detail": "Email is already verified"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         verification, created = EmailVerification.objects.get_or_create(user=user)
+#         if not created:
+#             verification.verification_code = EmailVerification.generate_verification_code()
+#             verification.save()
+
+#         self.send_verification_email(email, verification.verification_code)
+#         return Response({"detail": "Verification email resent"}, status=status.HTTP_200_OK)
+
+#     def send_verification_email(self, email, code):
+#         subject = 'Verify your email'
+#         message = f'Your verification code is: {code}'
+#         send_mail(subject, message, settings.EMAIL_HOST_USER, [email])
+###################################
+
+
 from .serializers import FollowSerializer
 
 from django.contrib.auth import get_user_model
@@ -210,7 +383,6 @@ class PongRecordListCreateView(generics.ListCreateAPIView):
     queryset = PongRecord.objects.all()
     serializer_class = PongRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
-
 
 ###### oauth ######
 from django.shortcuts import redirect
