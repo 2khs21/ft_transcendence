@@ -18,9 +18,9 @@ import { TextGeometry } from 'TextGeometry';
 // official board size
 const boardWidth = 300;
 const boardHeight = 400;
-const winScore = 3;
+const winScore = 5;
 const gameTime = 300;
-const ballSpeed = 2.0;
+const ballSpeed = 3.0;
 const ballRadius = 10;
 const paddleSpeed = 2.0;
 
