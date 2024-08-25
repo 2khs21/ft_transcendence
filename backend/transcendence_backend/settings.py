@@ -86,7 +86,6 @@ INSTALLED_APPS = [
     'django.contrib.admin',
 	'core',
     'chat',
-    'game',
 ]
 
 MIDDLEWARE = [
