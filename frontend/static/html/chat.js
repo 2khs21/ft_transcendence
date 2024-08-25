@@ -86,7 +86,6 @@ function setupWebSocket() {
     if (localStorage.getItem("accessToken")) {
       try {
         await updateUserConnection(username, false); // 연결 상태를 false로 업데이트
-        console.log(`User ${username} disconnected`);
       } catch (error) {
         console.error("Error updating user disconnection status:", error);
       }
@@ -97,6 +96,9 @@ function setupWebSocket() {
       setTimeout(() => setupWebSocket(), 5000); // 5초 후 재연결 시도
     } else {
       console.log("WebSocket connection closed during logout.");
+      await updateUserConnection(username, false); // 연결 상태를 false로 업데이트
+      console.log("username : ", username, "is disconnect");
+      console.log(`User ${username} disconnected`);
     }
   };
 }
@@ -192,7 +194,6 @@ async function handleSpecialCommands(message, username) {
       return true;
     }
   }
-
   if (message.startsWith("/") && !message.startsWith("/w")) {
     displayMessage({
       message: `/w, /befriend, /unfriend, /mute, /unmute, /profile 명령어를 사용할 수 있습니다.`,

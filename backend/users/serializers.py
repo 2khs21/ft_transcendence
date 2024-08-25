@@ -12,64 +12,48 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 User = get_user_model()  # 현재 프로젝트의 User 모델을 가져옵니다.
 
+from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
 class RegisterSerializer(serializers.ModelSerializer):
-		email = serializers.EmailField(
-						required=True,
-						validators=[UniqueValidator(queryset=User.objects.all())] # 이메일 중복 방지를 위한 도구
-						)
-		username = serializers.CharField(
-						validators=[UniqueValidator(queryset=User.objects.all())] # 이름 중복 검사를 위한 도구
-						)
-		password = serializers.CharField(
-			write_only=True,
-			required=True,
-			validators=[validate_password]
-			)
-		password2 = serializers.CharField(
-			write_only=True,
-			required=True,
-			)
-		
-		class Meta:
-				model = User
-				fields = ('username', 'password', 'password2', 'email')
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
 
-		def validate(self, data):
-			if data['password'] != data['password2']:
-				raise serializers.ValidationError({"password": "Password fields didn't match."})
-				# raise : 클라이언트에 에러 메세지 보냄
-			return data
-		
-		def create(self, validated_data):
-			# CREATE 요청에 대해 create 메서드를 오버라이딩, 유저를 생성하고 토큰을 생성하게 함.
-			user = User.objects.create_user(
-				validated_data['username'],
-				validated_data['email'],
-				validated_data['password']
-				)
-			user.set_password(validated_data['password'])
-			# 비밀번호를 해싱하여 저장
-			user.save()
-			token = Token.objects.create(user=user)
-			# DRF의 기본 인증 방법 중 하나인 토큰 인증을 사용하기 위해 토큰을 생성합니다. 이 토큰은 이후 API 요청 시 사용자가 인증할 때 사용됩니다.
-			# 새로 생성된 Token 인스턴스의 user 필드에 user 변수로 전달된 사용자 객체를 할당합니다.
-			return user
-		
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password', 'password2')
 
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+        return attrs
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email']
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
+
+class EmailVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6, min_length=6)
+    
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True, write_only=True)
     
     def validate(self, data):
         user = authenticate(username=data['username'], password=data['password'])
-        if user:
-            token = Token.objects.get(user=user)
-            return {"token": token.key}  # 토큰 키를 딕셔너리로 반환
-        else:
-            raise serializers.ValidationError(
-                {"error": "Unable to log in with provided credentials."}
-            )
-        
+        if user and user.is_active:
+            return data
+        raise serializers.ValidationError("Unable to log in with provided credentials.")
+
 ###################### follow ######################
 class FollowSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -114,28 +98,35 @@ class MuteSerializer(serializers.Serializer):
 ################# record #################
     
 from .models import PongRecord
-
 class PongRecordSerializer(serializers.ModelSerializer):
-    winner_username = serializers.ReadOnlyField(source='winner.username')
-    loser_username = serializers.ReadOnlyField(source='loser.username')
+    winner = serializers.CharField(write_only=True)
+    loser = serializers.CharField(write_only=True)
+    winner_username = serializers.CharField(source='winner.username', read_only=True)
+    loser_username = serializers.CharField(source='loser.username', read_only=True)
 
     class Meta:
         model = PongRecord
-        fields = ['id', 'winner_username', 'loser_username', 'winner_score', 'loser_score', 'end_time']
+        fields = ['id', 'winner', 'loser', 'winner_username', 'loser_username', 'end_time']
+        read_only_fields = ['id', 'end_time', 'winner_username', 'loser_username']
+
+    def validate(self, data):
+        if data['winner'] == data['loser']:
+            raise serializers.ValidationError("승자와 패자는 같을 수 없습니다.")
+        return data
 
     def create(self, validated_data):
-        # 승자와 패자의 username을 이용해 User 인스턴스를 가져옵니다.
-        winner_username = self.initial_data.get('winner_username')
-        loser_username = self.initial_data.get('loser_username')
-        
-        winner = User.objects.get(username=winner_username)
-        loser = User.objects.get(username=loser_username)
+        winner_username = validated_data.pop('winner')
+        loser_username = validated_data.pop('loser')
 
-        # PongRecord 인스턴스를 생성하고 저장합니다.
+        try:
+            winner = User.objects.get(username=winner_username)
+            loser = User.objects.get(username=loser_username)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("입력한 사용자 이름이 존재하지 않습니다.")
+
         pong_record = PongRecord.objects.create(
             winner=winner,
             loser=loser,
-            winner_score=validated_data['winner_score'],
-            loser_score=validated_data['loser_score']
+            **validated_data
         )
         return pong_record

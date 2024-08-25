@@ -72,6 +72,7 @@ function checkAuthState() {
   const accessToken = localStorage.getItem("accessToken");
   authState.isLoggedIn = accessToken;
   if (!accessToken) {
+    console.log("checkAuthState. login page...");
     navigate("/login");
   }
 }
@@ -96,7 +97,7 @@ function initEventListeners() {
     if (chatBox) {
       chatBox.remove(); // chat-messages 요소를 DOM에서 제거
     }
-
+    console.log("initEventListeners : login page...");
     navigate("/login");
   });
   document
@@ -131,13 +132,12 @@ export async function handleLogout() {
     if (!response.ok) {
       throw new Error("Failed to logout");
     }
-
+    authState.isLoggedIn = false;
     // 로컬 스토리지에서 토큰 제거
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     removeChatUI();
     console.log("User logged out successfully");
-    authState.isLoggedIn = false;
     console.log("Logout, close chatSocket, remove chatui");
     chatSocket.close();
     const chatContainer = document.getElementById("chat-container");

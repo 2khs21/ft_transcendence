@@ -143,6 +143,9 @@ export async function getOtherUserProfile(username) {
     );
     const data = await response.json();
     console.log("User profile:", data);
+    if (response.status === 404) {
+      return null;
+    }
     return data;
   } catch (error) {
     console.error(`Error fetching profile for user ${username}:`, error);

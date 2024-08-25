@@ -1,6 +1,6 @@
 #users/urls.py
 from django.urls import path
-from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView, FriendView, MuteView, PongRecordListCreateView,LogoutView
+from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView, FriendView, MuteView, PongRecordListCreateView,LogoutView,VerifyEmailView, SendVerificationEmailView
 from . import views
 
 urlpatterns = [
@@ -10,6 +10,15 @@ urlpatterns = [
 
 	path('register/', RegisterView.as_view(), name='register'),
 	path('login/', LoginView.as_view(), name='login'),
+	path('send-verification/', SendVerificationEmailView.as_view(), name='send-verification'),  # 새로 추가된 URL
+	path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
+	
+	# 안쓸꺼야
+	# path('verify-login/', VerifyLoginView.as_view(), name='verify-login'),
+	# path('resend-verification/', ResendVerificationView.as_view(), name='resend-verification'),
+
+
+
 
 	path('follow/', FollowUserView.as_view(), name='follow_user'),
 

@@ -1,5 +1,5 @@
 // home.js
-import { navigate } from "./app.js";
+import { authState, navigate } from "./app.js";
 import { getUsername } from "./profile.js";
 
 import {
@@ -16,6 +16,7 @@ export async function renderHome(container) {
   const accessToken = localStorage.getItem("accessToken");
 
   if (!accessToken) {
+    console.log("No access token found. home-> login page...");
     navigate("/login");
     return;
   }
@@ -51,9 +52,10 @@ export async function renderHome(container) {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
   }
-
-  await updateLists();
-
+  console.log("authstate.isLoggedIn : ", authState.isLoggedIn);
+  if (authState.isLoggedIn) {
+    await updateLists();
+  }
   // Set up an interval to update the lists every 30 seconds
   updateInterval = setInterval(updateLists, 30000);
 
@@ -62,6 +64,9 @@ export async function renderHome(container) {
 }
 
 async function updateLists() {
+  if (!authState.isLoggedIn) {
+    return;
+  }
   try {
     console.log("Updating user lists...");
     const allUsers = await getAllUsers();
