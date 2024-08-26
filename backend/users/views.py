@@ -144,68 +144,7 @@ class LoginView(APIView):
             'email': user.email
         }, status=status.HTTP_200_OK)
 
-# class VerifyLoginView(APIView):
-#     def post(self, request):
-#         username = request.data.get('username')
-#         email = request.data.get('email')
-#         code = request.data.get('code')
-
-#         if not all([username, email, code]):
-#             return Response({"detail": "Username, email and verification code are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         try:
-#             user = User.objects.get(username=username, email=email)
-#             verification = EmailVerification.objects.get(user=user, verification_code=code)
-            
-#             if not verification.is_verified:
-#                 verification.is_verified = True
-#                 verification.save()
-#                 user.is_email_verified = True
-#                 user.save()
-
-#                 refresh = RefreshToken.for_user(user)
-#                 return Response({
-#                     'refresh': str(refresh),
-#                     'access': str(refresh.access_token),
-#                     'username': user.username,
-#                     'email': user.email
-#                 }, status=status.HTTP_200_OK)
-#             else:
-#                 return Response({"detail": "Email already verified"}, status=status.HTTP_400_BAD_REQUEST)
-#         except User.DoesNotExist:
-#             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-#         except EmailVerification.DoesNotExist:
-#             return Response({"detail": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
-        
-# class ResendVerificationView(APIView):
-#     def post(self, request):
-#         username = request.data.get('username')
-#         email = request.data.get('email')
-
-#         if not username or not email:
-#             return Response({"detail": "Both username and email are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         try:
-#             user = User.objects.get(username=username, email=email)
-#         except User.DoesNotExist:
-#             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-#         if user.is_email_verified:
-#             return Response({"detail": "Email is already verified"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         verification, created = EmailVerification.objects.get_or_create(user=user)
-#         if not created:
-#             verification.verification_code = EmailVerification.generate_verification_code()
-#             verification.save()
-
-#         self.send_verification_email(email, verification.verification_code)
-#         return Response({"detail": "Verification email resent"}, status=status.HTTP_200_OK)
-
-#     def send_verification_email(self, email, code):
-#         subject = 'Verify your email'
-#         message = f'Your verification code is: {code}'
-#         send_mail(subject, message, settings.EMAIL_HOST_USER, [email])
-###################################
+##################################
 
 
 from .serializers import FollowSerializer

@@ -13,13 +13,6 @@ urlpatterns = [
 	path('send-verification/', SendVerificationEmailView.as_view(), name='send-verification'),  # 새로 추가된 URL
 	path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
 	
-	# 안쓸꺼야
-	# path('verify-login/', VerifyLoginView.as_view(), name='verify-login'),
-	# path('resend-verification/', ResendVerificationView.as_view(), name='resend-verification'),
-
-
-
-
 	path('follow/', FollowUserView.as_view(), name='follow_user'),
 
 	path('profile/', UserProfileView.as_view(), name='user-profile'),

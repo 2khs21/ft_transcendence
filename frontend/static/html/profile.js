@@ -1,5 +1,7 @@
 //profile.js
 
+import { authenticatedFetch } from "./auth.js";
+
 async function fetchUsername() {
   try {
     const profileData = await fetchProfileData();
@@ -22,11 +24,8 @@ export async function getUsername() {
 
 async function fetchProfileData() {
   try {
-    const response = await fetch("/api/users/profile/", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      },
-    });
+    const response = await authenticatedFetch(`/api/users/profile/`);
+    console.log("auth fetch test");
     if (!response.ok) {
       throw new Error("Failed to fetch profile data");
     }
@@ -38,12 +37,8 @@ async function fetchProfileData() {
 }
 async function updateProfile(formData) {
   try {
-    const response = await fetch("/api/users/profile/", {
+    const response = await authenticatedFetch(`/api/users/profile/`, {
       method: "PUT",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        // "X-CSRFToken": getCookie("csrftoken"),
-      },
       body: formData,
     });
     if (!response.ok) {
