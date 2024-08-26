@@ -9,6 +9,7 @@ import {
   updateUserConnection,
 } from "./func.js";
 import { getUsername } from "./profile.js";
+import { getWinRate } from "./record.js";
 // WebSocket 객체를 전역 변수로 선언합니다.
 export let chatSocket = null;
 
@@ -178,6 +179,7 @@ async function handleSpecialCommands(message, username) {
     if (message.startsWith(command + " ")) {
       const targetUser = message.split(" ")[1];
       const result = await func(targetUser, action);
+      console.log("command result : " + result);
       if (command === "/profile") {
         result
           ? displayUserProfile(result)
@@ -232,7 +234,13 @@ async function displayMessage(data) {
  * 사용자 프로필을 화면에 표시하는 함수입니다.
  * @param {Object} profile - 표시할 사용자 프로필 데이터
  */
-function displayUserProfile(profile) {
+async function displayUserProfile(profile) {
+  const existingContainer = document.getElementById("user-profile-container");
+  if (existingContainer) {
+    document.body.removeChild(existingContainer);
+  }
+
+  const winRate = await getWinRate(profile.username);
   const profileContainer = document.createElement("div");
   profileContainer.id = "user-profile-container";
   profileContainer.innerHTML = `
@@ -242,6 +250,7 @@ function displayUserProfile(profile) {
     <p>Username: ${profile.username}</p>
     <p>Email: ${profile.email}</p>
     <p>Status: ${profile.status_message || "No status message"}</p>
+    <p>Win Rate: ${winRate} </p>
     <button id="close-profile">X</button>
   `;
   document.body.appendChild(profileContainer);

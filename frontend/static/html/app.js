@@ -5,6 +5,8 @@ import { renderProfile, getUsername } from "./profile.js";
 import { chatSocket, removeChatUI } from "./chat.js";
 import { renderRegister } from "./register.js";
 import { initializeChat } from "./chat.js";
+import { renderRecord } from "./record.js";
+
 // import { renderGame, removeGame } from "./3d.js";
 
 export const authState = {
@@ -17,6 +19,8 @@ const routes = {
   "/profile": renderProfile,
   "/register": renderRegister,
   // "/game": renderGame,
+
+  "/record": renderRecord,
 };
 
 const app = document.getElementById("app");
@@ -109,6 +113,9 @@ function initEventListeners() {
   document
     .getElementById("profile-tab")
     .addEventListener("click", () => navigate("/profile"));
+  document
+    .getElementById("record-tab")
+    .addEventListener("click", () => navigate("/record"));
 }
 async function init() {
   handleOAuthCallback();

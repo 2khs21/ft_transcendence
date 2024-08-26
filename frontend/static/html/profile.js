@@ -1,6 +1,7 @@
 //profile.js
 
 import { authenticatedFetch } from "./auth.js";
+import { getWinRate } from "./record.js";
 
 async function fetchUsername() {
   try {
@@ -59,6 +60,7 @@ export async function renderProfile(container) {
       "<p>Failed to load profile. Please try again later.</p>";
     return;
   }
+  const winRate = await getWinRate(profile.username);
 
   container.innerHTML = `
 			<h2>Profile Page</h2>
@@ -70,6 +72,7 @@ export async function renderProfile(container) {
 					<p id="status-message">Status: ${
             profile.status_message || "No status message"
           }</p>
+          <p id="win-rate">Win Rate: ${winRate ? winRate + "%" : "N/A"}</p>
 			</div>
 			<form id="profile-form">
 					<input type="file" id="image-upload" accept="image/*">
