@@ -146,7 +146,14 @@ async function sendMessage() {
       whisper = true;
     }
   }
-
+  if (message.startsWith("/invite ")) {
+    const parts = message.split(" ");
+    if (parts.length >= 2) {
+      to_username = parts[1];
+      message = "come to my seat";
+      whisper = true;
+    }
+  }
   chatSocket.send(
     JSON.stringify({
       message: message,
@@ -196,7 +203,7 @@ async function handleSpecialCommands(message, username) {
       return true;
     }
   }
-  if (message.startsWith("/") && !message.startsWith("/w")) {
+  if (message.startsWith("/") && !message.startsWith("/w  ") && !message.startsWith("/invite ")) {
     displayMessage({
       message: `/w, /befriend, /unfriend, /mute, /unmute, /profile 명령어를 사용할 수 있습니다.`,
       username: "System",
