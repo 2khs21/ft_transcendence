@@ -6,8 +6,7 @@ import { chatSocket, removeChatUI } from "./chat.js";
 import { renderRegister } from "./register.js";
 import { initializeChat } from "./chat.js";
 import { renderRecord } from "./record.js";
-
-// import { renderGame, removeGame } from "./3d.js";
+import { renderGame } from "./3d.js";
 
 export const authState = {
   isLoggedIn: false,
@@ -18,9 +17,8 @@ const routes = {
   "/": renderHome,
   "/profile": renderProfile,
   "/register": renderRegister,
-  // "/game": renderGame,
-
   "/record": renderRecord,
+  "/game": renderGame,
 };
 
 const app = document.getElementById("app");
@@ -59,6 +57,7 @@ async function handleOAuthCallback() {
     console.log("Access Token:", accessToken);
     console.log("Refresh Token:", refreshToken);
     let username = await getUsername();
+    localStorage.setItem("username", username);
     console.log(username + " now login.");
     // Remove the tokens from the URL
     window.history.replaceState({}, document.title, "/");

@@ -1,27 +1,35 @@
-import * as THREE from "three";
+
+import * as THREE from 'three';
 // import WebGL from 'three/addons/capabilities/WebGL.js';
 // import { RoundedBoxGeometry } from 'three/examples/jsm/Addons.js';
 // import { FontLoader } from 'three/examples/jsm/Addons.js';
 // import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 // import GUI from 'three/examples/jsm/libs/lil-gui.module.min.js';
 // import { depth } from 'three/examples/jsm/nodes/Nodes.js';
-import WebGL from "WebGL";
-import { RoundedBoxGeometry } from "RoundedBoxGeometry";
-import { GUI } from "GUI";
-import { FontLoader } from "FontLoader";
-import { TextGeometry } from "TextGeometry";
+import WebGL from 'WebGL';
+import { RoundedBoxGeometry } from 'RoundedBoxGeometry';
+import { GUI } from 'GUI';
+import { FontLoader } from 'FontLoader';
+import { TextGeometry } from 'TextGeometry';
 
-import { authState } from "./app.js";
+// import { text } from 'express';
 // import { MathUtils } from 'MathUtils';
 
 // official board size
 const boardWidth = 300;
 const boardHeight = 400;
-const winScore = 3;
+const winScore = 5;
 const gameTime = 300;
-const ballSpeed = 2.0;
+const ballSpeed = 3.0;
 const ballRadius = 10;
 const paddleSpeed = 2.0;
+
+let username;
+let opponent;
+let tournamentP1;
+let tournamentP2;
+let tournamentP3;
+let tournamentP4;
 
 let player1Score = 0;
 let player2Score = 0;
@@ -39,189 +47,457 @@ let ballDirection = new THREE.Vector2(1, 1);
 
 const keysPressed = {};
 
-let scene;
-export function renderGame() {
-  init();
-}
-export function removeGame() {
-    while (scene.children.length > 0) {
-        scene.remove(scene.children[0]);
-    }
+let appContainer = document.getElementById('app');
+let pongContainer;
 
-    const app = document.getElementById('app');
-    while (app.firstChild) {
-        app.removeChild(app.firstChild);
-    }
-  const app = document.getElementById("app");
+export function renderGame() {
+
+  makeDualTournamentsButtons();
+
+}
+
+export function removeGame() {
+  while (scene.children.length > 0) {
+    scene.remove(scene.children[0]);
+  }
+
+  const app = document.getElementById('app');
   while (app.firstChild) {
     app.removeChild(app.firstChild);
   }
 }
 
-var username = localStorage.getItem("username");
-var opponent = localStorage.getItem("opponent");
-if (opponent == null) {
-    opponent = "Faker";
+function sendResult() {
+  const result = {
+    player1: username,
+    player2: opponent,
+  };
+
 }
-var tournamentP1 = localStorage.getItem("tournamentP1");
-var tournamentP2 = localStorage.getItem("tournamentP2");
-var tournamentP3 = localStorage.getItem("tournamentP3");
-var tournamentP4 = localStorage.getItem("tournamentP4");
+
+function removeChildNodes(parent) {
+
+  while (parent.firstChild) {
+
+    parent.removeChild(parent.firstChild);
+
+  }
+}
+
+function makeDualTournamentsButtons() {
+  const dualButton = document.createElement('button');
+  dualButton.textContent = '듀얼';
+  dualButton.addEventListener('click', () => {
+
+    removeChildNodes(appContainer);
+    // remove tournament local storage
+    localStorage.removeItem("tournamentP1");
+    localStorage.removeItem("tournamentP2");
+    localStorage.removeItem("tournamentP3");
+    localStorage.removeItem("tournamentP4");
+
+    // make form for opponent
+    const opponentForm = document.createElement('form');
+    opponentForm.id = 'opponentForm';
+    const opponentLabel = document.createElement('label');
+    opponentLabel.textContent = '상대 이름: ';
+    const opponentInput = document.createElement('input');
+    opponentInput.type = 'text';
+    opponentInput.id = 'opponentInput';
+    opponentInput.name = 'opponent';
+    opponentInput.required = true;
+    opponentForm.appendChild(opponentLabel);
+    opponentForm.appendChild(opponentInput);
+    const submitButton = document.createElement('button');
+    submitButton.textContent = '시작';
+    submitButton.type = 'submit';
+    opponentForm.appendChild(submitButton);
+    appContainer = document.getElementById('app');
+    appContainer.appendChild(opponentForm);
+    opponentForm.addEventListener('submit', (e) => {
+      if (opponentInput.value === "") {
+        alert("상대 이름을 입력해 주세요.");
+        return;
+      } else if (opponentInput.value === username) {
+        alert("자신을 상대로 할 수 없습니다.");
+        return;
+      }
+
+      e.preventDefault();
+      // oppenent만 local storage에 저장
+      const opponent = document.getElementById('opponentInput').value;
+      localStorage.setItem("opponent", opponent);
+
+      removeChildNodes(appContainer);
+
+      init();
+    });
+  });
 
 
-let gameSocket = new WebSocket(
-  // TODO : ws to wss
-  `${protocol}${window.location.hostname}/ws/game/`
-);
+  const tournamentButton = document.createElement('button');
+  tournamentButton.textContent = '토너먼트';
+  tournamentButton.addEventListener('click', () => {
+    removeChildNodes(appContainer);
+    // remove oppenent local storage
+    localStorage.removeItem("opponent");
+
+
+    // make form for tournament
+    const tournamentForm = document.createElement('form');
+    tournamentForm.id = 'tournamentForm';
+    const tournamentLabel1 = document.createElement('label');
+    tournamentLabel1.textContent = '참가자1: ';
+    const tournamentInput1 = document.createElement('input');
+    tournamentInput1.type = 'text';
+    tournamentInput1.id = 'tournamentInput1';
+    tournamentInput1.name = 'tournament1';
+    tournamentInput1.required = true;
+    tournamentForm.appendChild(tournamentLabel1);
+    tournamentForm.appendChild(tournamentInput1);
+    const tournamentLabel2 = document.createElement('label');
+    tournamentLabel2.textContent = '참가자2: ';
+    const tournamentInput2 = document.createElement('input');
+    tournamentInput2.type = 'text';
+    tournamentInput2.id = 'tournamentInput2';
+    tournamentInput2.name = 'tournament2';
+    tournamentInput2.required = true;
+    tournamentForm.appendChild(tournamentLabel2);
+    tournamentForm.appendChild(tournamentInput2);
+    const tournamentLabel3 = document.createElement('label');
+    tournamentLabel3.textContent = '참가자3: ';
+    const tournamentInput3 = document.createElement('input');
+    tournamentInput3.type = 'text';
+    tournamentInput3.id = 'tournamentInput3';
+    tournamentInput3.name = 'tournament3';
+    tournamentInput3.required = true;
+    tournamentForm.appendChild(tournamentLabel3);
+    tournamentForm.appendChild(tournamentInput3);
+    const tournamentLabel4 = document.createElement('label');
+    tournamentLabel4.textContent = '참가자4: ';
+    const tournamentInput4 = document.createElement('input');
+    tournamentInput4.type = 'text';
+    tournamentInput4.id = 'tournamentInput4';
+    tournamentInput4.name = 'tournament4';
+    tournamentInput4.required = true;
+    tournamentForm.appendChild(tournamentLabel4);
+    tournamentForm.appendChild(tournamentInput4);
+    const submitButton = document.createElement('button');
+    submitButton.textContent = '시작';
+    submitButton.type = 'submit';
+    tournamentForm.appendChild(submitButton);
+
+    appContainer = document.getElementById('app');
+    appContainer.appendChild(tournamentForm);
+    tournamentForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // 중복시 경고
+      if (tournamentInput1.value === tournamentInput2.value ||
+        tournamentInput1.value === tournamentInput3.value ||
+        tournamentInput1.value === tournamentInput4.value ||
+        tournamentInput2.value === tournamentInput3.value ||
+        tournamentInput2.value === tournamentInput4.value ||
+        tournamentInput3.value === tournamentInput4.value) {
+        alert("참가자 이름이 중복되었습니다.");
+        return;
+      }
+
+      // tournament만 local storage에 저장
+      const tournamentP1 = document.getElementById('tournamentInput1').value;
+      const tournamentP2 = document.getElementById('tournamentInput2').value;
+      const tournamentP3 = document.getElementById('tournamentInput3').value;
+      const tournamentP4 = document.getElementById('tournamentInput4').value;
+      localStorage.setItem("tournamentP1", tournamentP1);
+      localStorage.setItem("tournamentP2", tournamentP2);
+      localStorage.setItem("tournamentP3", tournamentP3);
+      localStorage.setItem("tournamentP4", tournamentP4);
+
+      removeChildNodes(appContainer);
+
+      init();
+    });
+  });
+
+  appContainer = document.getElementById('app');
+  appContainer.appendChild(dualButton);
+  appContainer.appendChild(tournamentButton);
+}
 
 /* --------------------- THREE.js game logic starts --------------------- */
 
 // 씬 만들기
-export function init() {
+function init() {
 
-    if (WebGL.isWebGLAvailable()) {
-        player1Score = 0;
-        player2Score = 0;
-        isPaddleMovable = false;
-        isBallMovable = false;
-        ballDirection.set(0, 0);
+  if (WebGL.isWebGLAvailable()) {
 
-        scene = new THREE.Scene();
-        // const gui = new GUI();
-        //textGeometry를 담을 배열
+    appContainer = document.getElementById('app');
+    const pongDiv = document.createElement('div');
+    pongDiv.id = 'pong';
+    appContainer.appendChild(pongDiv);
+    pongContainer = document.getElementById('pong');
 
-        // for raycasting
-        const raycaster = new THREE.Raycaster();
-        const pointer = new THREE.Vector2();
-        let SELECTED;
+    username = localStorage.getItem("username");
+    opponent = localStorage.getItem("opponent");
 
-        let raycastArray = new Array(2);
-        let textArray = new Array();
-        // let raycastMesh, raycastLine;
+    tournamentP1 = localStorage.getItem("tournamentP1");
+    tournamentP2 = localStorage.getItem("tournamentP2");
+    tournamentP3 = localStorage.getItem("tournamentP3");
+    tournamentP4 = localStorage.getItem("tournamentP4");
+    player1Score = 0;
+    player2Score = 0;
+    isPaddleMovable = false;
+    isBallMovable = false;
+    ballDirection.set(0, 0);
 
-        function removeText() {
-            for (let i = 0; i < textArray.length; i++) {
-                scene.remove(textArray[i]);
-            }
+    const scene = new THREE.Scene();
+    // const gui = new GUI();
+    //textGeometry를 담을 배열
+
+    // for raycasting
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let SELECTED;
+
+    let raycastArray = new Array(2);
+    let textArray = new Array();
+    // let raycastMesh, raycastLine;
+
+    function removeText() {
+      for (let i = 0; i < textArray.length; i++) {
+        scene.remove(textArray[i]);
+      }
+    }
+
+    function startDualRound() {
+      if (player1Score >= winScore || player2Score >= winScore) {
+        if (player1Score > player2Score) {
+          createText(username + " win!", 10, new THREE.Vector3(60, 0, 100), textRotation, scene, 0xFF8FF0);
+          resetBoard();
+          removeText();
+        } else {
+          createText(opponent + " win!", 10, new THREE.Vector3(60, 0, 100), textRotation, scene, 0xFF8FF0);
+          resetBoard();
+          removeText();
         }
+        setTimeout(() => {
+          // sendResult();
+          resetBoard();
+          removeText();
+          player1Score = 0;
+          player2Score = 0;
+          addScores(0, 0);
 
-        function startDualRound() {
-            if (player1Score >= winScore || player2Score >= winScore) {
-                if (player1Score > player2Score) {
-                    createText(username + "승리!", 20, new THREE.Vector3(50, 0, 100), textRotation, scene, 0xFF8FF0);
-                    resetBoard();
-                    removeText();
-                } else {
-                    createText(opponent + "승리!", 20, new THREE.Vector3(50, 0, 100), textRotation, scene, 0xFF8FF0);
-                    resetBoard();
-                    removeText();
-                }
-                setTimeout(() => {
-                    // sendResult();
-                    resetBoard();
-                    removeText();
-                    addScores(0, 0);
-                    player1Score = 0;
-                    player2Score = 0;
+          createText("듀얼", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xB38FF0);
+          createText("토너먼트", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xB38FF0);
+        }, 3000);
 
-                    createText("듀얼", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xB38FF0);
-                    createText("토너먼트", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xB38FF0);
-                }, 3000);
+        return 0;
+      }
+      resetBoard();
 
-                return 0;
+      isPaddleMovable = true;
+      isBallMovable = true;
+
+      const randomDirection = new THREE.Vector2();
+      // X자가 뻗는 네 방향 중 하나
+      randomDirection.x = Math.random() > 0.5 ? 1 : -1;
+      randomDirection.y = Math.random() > 0.5 ? 1 : -1;
+
+
+      ballDirection.set(randomDirection.x, randomDirection.y);
+    }
+
+    // match 1
+    // tounamentP1 vs tournamentP2
+    let tournamentRound = 1;
+
+    let tournamentPlayer1Name;
+    let tournamentPlayer2Name;
+
+    let round1Winner;
+    let round2Winner;
+
+    function startTournamentRound() {
+      if (tournamentRound == 1) {
+        tournamentPlayer1Name = tournamentP1;
+        tournamentPlayer2Name = tournamentP2;
+      } else if (tournamentRound == 2) {
+        tournamentPlayer1Name = tournamentP3;
+        tournamentPlayer2Name = tournamentP4;
+      } else if (tournamentRound == 3) {
+        tournamentPlayer1Name = round1Winner;
+        tournamentPlayer2Name = round2Winner;
+      }
+
+      // 결판이 난 경우
+      if (player1Score >= winScore || player2Score >= winScore) {
+        if (player1Score > player2Score) {
+          createText(tournamentPlayer1Name + " win!", 10, new THREE.Vector3(60, 0, 100), textRotation, scene, 0xFF8FF0);
+          // 5초 후에 다음 라운드 시작
+          setTimeout(() => {
+            if (tournamentRound == 1) {
+              round1Winner = player1Score > player2Score ? tournamentP1 : tournamentP2;
+              tournamentRound++;
+              player1Score = 0;
+              player2Score = 0;
+              removeText();
+              resetBoard();
+              startTournamentRound();
+            } else if (tournamentRound == 2) {
+              round2Winner = player1Score > player2Score ? tournamentP3 : tournamentP4;
+              tournamentRound++;
+              player1Score = 0;
+              player2Score = 0;
+              removeText();
+              resetBoard();
+              startTournamentRound();
             }
-            resetBoard();
-
-            isPaddleMovable = true;
+            else if (tournamentRound == 3) {
+              removeText();
+              resetBoard();
+              createText("듀얼", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xB38FF0);
+              createText("토너먼트", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xB38FF0);
+              tournamentRound = 1;
+              player1Score = 0;
+              player2Score = 0;
+              return 0;
+            }
+          }, 5000);
+        } else {
+          createText(tournamentPlayer2Name + " win!", 10, new THREE.Vector3(80, 0, 100), textRotation, scene, 0xFF8FF0);
+          setTimeout(() => {
+            if (tournamentRound === 1) {
+              round1Winner = player1Score > player2Score ? tournamentP1 : tournamentP2;
+              tournamentRound++;
+              player1Score = 0;
+              player2Score = 0;
+              removeText();
+              resetBoard();
+              startTournamentRound();
+            } else if (tournamentRound === 2) {
+              round2Winner = player1Score > player2Score ? tournamentP3 : tournamentP4;
+              tournamentRound++;
+              player1Score = 0;
+              player2Score = 0;
+              removeText();
+              resetBoard();
+              startTournamentRound();
+            }
+            else if (tournamentRound === 3) {
+              removeText();
+              resetBoard();
+              createText("듀얼", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xB38FF0);
+              createText("토너먼트", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xB38FF0);
+              tournamentRound = 1;
+              player1Score = 0;
+              player2Score = 0;
+              return 0;
+            }
+          }, 5000);
+        }
+      }
+      // 게임 시작
+      else {
+        if (player1Score == 0 && player2Score == 0) {
+          isBallMovable = false;
+          isPaddleMovable = false;
+          removeText();
+          addScores(0, 0);
+          createText(tournamentPlayer1Name + " vs " + tournamentPlayer2Name, 10, new THREE.Vector3(80, 0, 100), textRotation, scene, 0xFF8FF0);
+          setTimeout(() => {
             isBallMovable = true;
-
+            isPaddleMovable = true;
             const randomDirection = new THREE.Vector2();
-            // X자가 뻗는 네 방향 중 하나
             randomDirection.x = Math.random() > 0.5 ? 1 : -1;
             randomDirection.y = Math.random() > 0.5 ? 1 : -1;
-
-
             ballDirection.set(randomDirection.x, randomDirection.y);
+          }, 3000);
+          return 0;
         }
+        setTimeout(() => {
+        isBallMovable = true;
+        isPaddleMovable = true;
+        const randomDirection = new THREE.Vector2();
+        randomDirection.x = Math.random() > 0.5 ? 1 : -1;
+        randomDirection.y = Math.random() > 0.5 ? 1 : -1;
+        ballDirection.set(randomDirection.x, randomDirection.y);
+        }, 3000);
+      }
+    }
+  
 
-        function setPlayerName() {
-            let player1Name = localStorage.getItem("username");
-            let player2Name = localStorage.getItem("opponent");
-        }
+  // 카메라 만들기 (FoV, aspect ratio, near clipping plane, far clipping plane );
+  // window.innerWidth / window.innerHeight 은 화면의 비율 (aspect ratio)
+  // near clipping plane 아래와 far clipping plane 밖은 렌더되지 않음.
+  const camera = new THREE.PerspectiveCamera(90, (window.innerWidth / 1.5) / (window.innerHeight / 1.5), 0.1, 5000);
+  camera.position.set(0, -250, 150);
+  // camera.position.set(0, -50, 100);
+  camera.lookAt(0, 70, -50);
+  camera.aspect = (window.innerWidth / 1.5) / (window.innerHeight / 1.5);
+
+  // 렌더러 만들기, 브라우저 윈도우만큼 사이즈를 지정해 주었는데 다른 경우도 가능할 듯?
+  // window.innerWidth/2 and window.innerHeight/2 라고 한다.
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+  });
+
+  // 세 번째 인자로 false를 주면 더 작은 레솔루션으로 렌더 가능 (최적화?)
+  renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
+  // renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(window.devicePixelRatio, 2);
+
+  // main loop 인 듯? 몰루?
+  renderer.setAnimationLoop(animate);
+
+  // 그림자 on
+  renderer.shadowMap.enabled = true;
+
+  if (document.getElementById('pong').children.length == 0) {
+    document.getElementById('pong').appendChild(renderer.domElement);
+    document.getElementById('pong').children[0].id = 'pongGame';
+  }
+
+  const ambientLightColor = 0x404040;
+  const ambientLightIntensity = 10;
+  const ambientLight = new THREE.AmbientLight(ambientLightColor, ambientLightIntensity);
+  scene.add(ambientLight);
+
+  const directionalLightColor = 0xFFFFFF;
+  const directionalLightIntensity = 20;
+  const directionalLight = new THREE.DirectionalLight(directionalLightColor, directionalLightIntensity);
+  directionalLight.position.set(0, -200, 200);
+  directionalLight.target.position.set(0, -boardHeight / 2, 0);
+  directionalLight.castShadow = true;
+  scene.add(directionalLight);
+  scene.add(directionalLight.target);
+
+  const pointLightColor = 0xFFFFFF;
+  const pointLightIntensity = 100000;
+  const pointLight = new THREE.PointLight(pointLightColor, pointLightIntensity, 0, 2);
+  pointLight.position.set(0, 0, 100);
+  pointLight.castShadow = true;
+  scene.add(pointLight);
+
+  // const spotLightColor = 0xFFFFFF;
+  // const spotLightIntensity = 100000;
+  // const spotLight = new THREE.SpotLight(spotLightColor, spotLightIntensity);
+  // spotLight.position.set(0, 0, 200);
+  // spotLight.castShadow = true;
+  // spotLight.shadow.mapSize.width = 256;
+  // spotLight.shadow.mapSize.height = 256;
+  // spotLight.shadow.camera.near = 0;
+  // spotLight.shadow.camera.far = 4000;
+  // spotLight.shadow.camera.fov = 30;
 
 
-        // 카메라 만들기 (FoV, aspect ratio, near clipping plane, far clipping plane );
-        // window.innerWidth / window.innerHeight 은 화면의 비율 (aspect ratio)
-        // near clipping plane 아래와 far clipping plane 밖은 렌더되지 않음.
-        const camera = new THREE.PerspectiveCamera(90, (window.innerWidth / 1.5) / (window.innerHeight / 1.5), 0.1, 5000);
-        camera.position.set(0, -250, 150);
-        // camera.position.set(0, -50, 100);
-        camera.lookAt(0, 70, -50);
-        camera.aspect = (window.innerWidth / 1.5) / (window.innerHeight / 1.5);
-
-        // 렌더러 만들기, 브라우저 윈도우만큼 사이즈를 지정해 주었는데 다른 경우도 가능할 듯?
-        // window.innerWidth/2 and window.innerHeight/2 라고 한다.
-        const renderer = new THREE.WebGLRenderer({
-            antialias: true,
-        });
-
-        // 세 번째 인자로 false를 주면 더 작은 레솔루션으로 렌더 가능 (최적화?)
-        renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
-        // renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setPixelRatio(window.devicePixelRatio, 2);
-
-        // main loop 인 듯? 몰루?
-        renderer.setAnimationLoop(animate);
-
-        // 그림자 on
-        renderer.shadowMap.enabled = true;
-
-        if (document.getElementById('app').children.length == 0) {
-            document.getElementById('app').appendChild(renderer.domElement);
-            document.getElementById('app').children[0].id = 'pong';
-        }
-        let container = document.getElementById('pong');
-
-        const ambientLightColor = 0x404040;
-        const ambientLightIntensity = 10;
-        const ambientLight = new THREE.AmbientLight(ambientLightColor, ambientLightIntensity);
-        scene.add(ambientLight);
-
-        const directionalLightColor = 0xFFFFFF;
-        const directionalLightIntensity = 20;
-        const directionalLight = new THREE.DirectionalLight(directionalLightColor, directionalLightIntensity);
-        directionalLight.position.set(0, -200, 200);
-        directionalLight.target.position.set(0, -boardHeight / 2, 0);
-        directionalLight.castShadow = true;
-        scene.add(directionalLight);
-        scene.add(directionalLight.target);
-
-        const pointLightColor = 0xFFFFFF;
-        const pointLightIntensity = 100000;
-        const pointLight = new THREE.PointLight(pointLightColor, pointLightIntensity, 0, 2);
-        pointLight.position.set(0, 0, 100);
-        pointLight.castShadow = true;
-        scene.add(pointLight);
-
-        // const spotLightColor = 0xFFFFFF;
-        // const spotLightIntensity = 100000;
-        // const spotLight = new THREE.SpotLight(spotLightColor, spotLightIntensity);
-        // spotLight.position.set(0, 0, 200);
-        // spotLight.castShadow = true;
-        // spotLight.shadow.mapSize.width = 256;
-        // spotLight.shadow.mapSize.height = 256;
-        // spotLight.shadow.camera.near = 0;
-        // spotLight.shadow.camera.far = 4000;
-        // spotLight.shadow.camera.fov = 30;
-
-
-        const vertexShader = `
+  const vertexShader = `
         void main() {
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
       `;
 
-    const fragmentShader = `
+  const fragmentShader = `
     //   // Created by inigo quilez - iq/2013 : https://www.shadertoy.com/view/4dl3zn
     //   // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
     //   // Messed up by Weyland
@@ -315,874 +591,536 @@ void main()
 }
       `;
 
-    const backgroundShader = new THREE.ShaderMaterial({
-      uniforms: {
-        iTime: {
-          type: "f",
-          value: 0.0,
-        },
-        iResolution: {
-          type: THREE.Vector2,
-          value: [window.innerWidth / 1.5, window.innerHeight / 1.5],
-        },
-        iMouse: {
-          type: THREE.Vector2,
-          value: [0.0, 0.0],
-        },
+  const backgroundShader = new THREE.ShaderMaterial({
+    uniforms: {
+      iTime: {
+        type: 'f',
+        value: 0.0,
       },
-      vertexShader,
-      fragmentShader,
-      side: THREE.BackSide,
-    });
-    const skyGeo = new THREE.SphereGeometry(4000, 32, 15);
-    // const skyMat = new THREE.ShaderMaterial({
-    //     uniforms: uniforms,
-    //     vertexShader: vertexShader,
-    //     fragmentShader: fragmentShader,
-    //     side: THREE.BackSide
-    // });
+      iResolution: {
+        type: THREE.Vector2,
+        value: [window.innerWidth / 1.5, window.innerHeight / 1.5],
+      },
+      iMouse: {
+        type: THREE.Vector2,
+        value: [0.0, 0.0],
+      }
+    },
+    vertexShader,
+    fragmentShader,
+    side: THREE.BackSide,
+  });
+  const skyGeo = new THREE.SphereGeometry(4000, 32, 15);
+  // const skyMat = new THREE.ShaderMaterial({
+  //     uniforms: uniforms,
+  //     vertexShader: vertexShader,
+  //     fragmentShader: fragmentShader,
+  //     side: THREE.BackSide
+  // });
 
-    const sky = new THREE.Mesh(skyGeo, backgroundShader);
-    scene.add(sky);
+  const sky = new THREE.Mesh(skyGeo, backgroundShader);
+  scene.add(sky);
 
-    // scene.overrideMaterial = backgroundShader;
+  // scene.overrideMaterial = backgroundShader;
 
-    const boardGeometry = new THREE.BoxGeometry(
-      boardWidth,
-      boardHeight + 20,
-      100
-    );
-    // const planeMaterial = backgroundShader;
-    const boardMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xb38ff0,
-      side: THREE.FrontSide,
-      transparent: false,
-      opacity: 1,
-      transmission: 0.3,
-      thickness: 0.3,
-      // reflectivity: 0.4,
-      metalness: 1,
-      roughness: 0.15,
-      flatShading: true,
-    });
+  const boardGeometry = new THREE.BoxGeometry(boardWidth, boardHeight + 20, 100);
+  // const planeMaterial = backgroundShader;
+  const boardMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xB38FF0,
+    side: THREE.FrontSide,
+    transparent: false,
+    opacity: 1,
+    transmission: 0.3,
+    thickness: 0.3,
+    // reflectivity: 0.4,
+    metalness: 1,
+    roughness: 0.15,
+    flatShading: true,
+  });
 
-    const board = new THREE.Mesh(boardGeometry, boardMaterial);
-    board.position.set(0, 0, -50);
-    board.receiveShadow = true;
-    scene.add(board);
-    // board.scale.setX = 828;
-    // board.scale.setY = 525;
+  const board = new THREE.Mesh(boardGeometry, boardMaterial);
+  board.position.set(0, 0, -50);
+  board.receiveShadow = true;
+  scene.add(board);
+  // board.scale.setX = 828;
+  // board.scale.setY = 525;
 
-    // 2.5 0.2 0.5
-    const playerPaddleSizeX = boardWidth / 8;
-    const playerPaddleSizeY = 5;
-    const playerPaddleSizeZ = 10;
+  // 2.5 0.2 0.5
+  const playerPaddleSizeX = boardWidth / 8;
+  const playerPaddleSizeY = 5;
+  const playerPaddleSizeZ = 10;
 
-    const enemyPaddleGeometry = new RoundedBoxGeometry(
-      playerPaddleSizeX,
-      playerPaddleSizeY,
-      playerPaddleSizeZ,
-      20,
-      20
-    );
-    // 컬러를 칠해 줄 메테리얼이 필요
-    const enemyPaddleMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xfe1e50,
-      transparent: true,
-      opacity: 0.9,
-      transmission: 0.5,
-      thickness: 1,
-      reflectivity: 1.0,
-      metalness: 1.0,
-      roughness: 0.0,
-    });
+  const enemyPaddleGeometry = new RoundedBoxGeometry(playerPaddleSizeX, playerPaddleSizeY, playerPaddleSizeZ, 20, 20);
+  // 컬러를 칠해 줄 메테리얼이 필요
+  const enemyPaddleMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xFE1E50,
+    transparent: true,
+    opacity: 0.9,
+    transmission: 0.5,
+    thickness: 1,
+    reflectivity: 1.0,
+    metalness: 1.0,
+    roughness: 0.00,
+  });
 
-    // Mesh가 필요
-    const enemyPaddle = new THREE.Mesh(
-      enemyPaddleGeometry,
-      enemyPaddleMaterial
-    );
-    enemyPaddle.castShadow = true;
-    enemyPaddle.position.set(0, boardHeight / 2, playerPaddleSizeZ / 2);
+  // Mesh가 필요
+  const p2Paddle = new THREE.Mesh(enemyPaddleGeometry, enemyPaddleMaterial);
+  p2Paddle.castShadow = true;
+  p2Paddle.position.set(0, boardHeight / 2, playerPaddleSizeZ / 2);
 
-    const myPaddleGeometry = new RoundedBoxGeometry(
-      playerPaddleSizeX,
-      playerPaddleSizeY,
-      playerPaddleSizeZ,
-      20,
-      20
-    );
-    const myPaddleMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x90e0ef,
-      transparent: true,
-      opacity: 0.9,
-      transmission: 0.5,
-      thickness: 1,
-      reflectivity: 1.0,
-      metalness: 1.0,
-      roughness: 0.0,
-    });
+  const myPaddleGeometry = new RoundedBoxGeometry(playerPaddleSizeX, playerPaddleSizeY, playerPaddleSizeZ, 20, 20);
+  const myPaddleMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x90E0EF,
+    transparent: true,
+    opacity: 0.9,
+    transmission: 0.5,
+    thickness: 1,
+    reflectivity: 1.0,
+    metalness: 1.0,
+    roughness: 0.00,
 
-    const myPaddle = new THREE.Mesh(myPaddleGeometry, myPaddleMaterial);
-    myPaddle.position.set(0, -boardHeight / 2, playerPaddleSizeZ / 2);
-    myPaddle.castShadow = true;
+  });
 
-    // 0, 0, 0에 add됨
-    scene.add(myPaddle);
-    scene.add(enemyPaddle);
+  const p1Paddle = new THREE.Mesh(myPaddleGeometry, myPaddleMaterial);
+  p1Paddle.position.set(0, -boardHeight / 2, playerPaddleSizeZ / 2);
+  p1Paddle.castShadow = true;
 
-    // board 상하좌우 bars
-    const verticalBarGeometry = new RoundedBoxGeometry(
-      25,
-      boardHeight + 20,
-      100,
-      20,
-      20
-    );
-    const barMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xb38ff0,
-      transparent: true,
-      opacity: 1.0,
-      transmission: 0.5,
-      thickness: 1,
-      reflectivity: 0.5,
-      metalness: 1.0,
-      roughness: 0.1,
-    });
-    // const horizontalBarGeometry = new RoundedBoxGeometry(boardWidth / 4 - 10, 10, playerPaddleSizeZ, 20, 20);
-    const westBar = new THREE.Mesh(verticalBarGeometry, barMaterial);
-    const eastBar = new THREE.Mesh(verticalBarGeometry, barMaterial);
-    // const leftNorthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
-    // const rightNorthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
-    // const leftSouthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
-    // const rightSouthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
+  // 0, 0, 0에 add됨
+  scene.add(p1Paddle);
+  scene.add(p2Paddle);
 
-    westBar.position.set(-boardWidth / 2 - 12.5, 0, -40);
-    eastBar.position.set(boardWidth / 2 + 12.5, 0, -40);
-    // // (boardWidth / 2) - (boardWidth / 4 - 10) == boardWidth / 4 - 10;
-    // leftNorthBar.position.set(-(boardWidth / 4 + 55), boardHeight / 2 + playerPaddleSizeY / 2, playerPaddleSizeZ);
-    // rightNorthBar.position.set(boardWidth / 4 + 55, boardHeight / 2 + playerPaddleSizeY / 2, playerPaddleSizeZ);
-    // leftSouthBar.position.set(-(boardWidth/ 4 + 55), -boardHeight / 2 - playerPaddleSizeY, playerPaddleSizeZ);
-    // rightSouthBar.position.set(boardWidth / 4 + 55, -boardHeight / 2 - playerPaddleSizeY, playerPaddleSizeZ);
+  // board 상하좌우 bars
+  const verticalBarGeometry = new RoundedBoxGeometry(25, boardHeight + 20, 100, 20, 20);
+  const barMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xB38FF0,
+    transparent: true,
+    opacity: 1.0,
+    transmission: 0.5,
+    thickness: 1,
+    reflectivity: 0.5,
+    metalness: 1.0,
+    roughness: 0.1,
+  });
+  // const horizontalBarGeometry = new RoundedBoxGeometry(boardWidth / 4 - 10, 10, playerPaddleSizeZ, 20, 20);
+  const westBar = new THREE.Mesh(verticalBarGeometry, barMaterial);
+  const eastBar = new THREE.Mesh(verticalBarGeometry, barMaterial);
+  // const leftNorthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
+  // const rightNorthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
+  // const leftSouthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
+  // const rightSouthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
 
-    scene.add(westBar);
-    scene.add(eastBar);
-    // scene.add(leftNorthBar);
-    // scene.add(rightNorthBar);
-    // scene.add(leftSouthBar);
-    // scene.add(rightSouthBar);
 
-    const ballGeometry = new THREE.SphereGeometry(ballRadius);
-    const ballMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xb38ff0,
-      transparent: true,
-      opacity: 1.0,
-      transmission: 0.5,
-      thickness: 1,
-      reflectivity: 1.0,
-      metalness: 1.0,
-      roughness: 0.1,
-    });
-    const ball = new THREE.Mesh(ballGeometry, ballMaterial);
-    ball.castShadow = true;
-    ball.position.set(0, 0, ballRadius / 2);
-    scene.add(ball);
-    // spotLight.target = ball;
-    // scene.add( spotLight );
+  westBar.position.set(-boardWidth / 2 - 12.5, 0, -40);
+  eastBar.position.set(boardWidth / 2 + 12.5, 0, -40);
+  // // (boardWidth / 2) - (boardWidth / 4 - 10) == boardWidth / 4 - 10;
+  // leftNorthBar.position.set(-(boardWidth / 4 + 55), boardHeight / 2 + playerPaddleSizeY / 2, playerPaddleSizeZ);
+  // rightNorthBar.position.set(boardWidth / 4 + 55, boardHeight / 2 + playerPaddleSizeY / 2, playerPaddleSizeZ);
+  // leftSouthBar.position.set(-(boardWidth/ 4 + 55), -boardHeight / 2 - playerPaddleSizeY, playerPaddleSizeZ);
+  // rightSouthBar.position.set(boardWidth / 4 + 55, -boardHeight / 2 - playerPaddleSizeY, playerPaddleSizeZ);
 
-    // for score
+  scene.add(westBar);
+  scene.add(eastBar);
+  // scene.add(leftNorthBar);
+  // scene.add(rightNorthBar);
+  // scene.add(leftSouthBar);
+  // scene.add(rightSouthBar);
+
+  const ballGeometry = new THREE.SphereGeometry(ballRadius);
+  const ballMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xB38FF0,
+    transparent: true,
+    opacity: 1.0,
+    transmission: 0.5,
+    thickness: 1,
+    reflectivity: 1.0,
+    metalness: 1.0,
+    roughness: 0.1,
+  });
+  const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+  ball.castShadow = true;
+  ball.position.set(0, 0, ballRadius / 2);
+  scene.add(ball);
+  // spotLight.target = ball;
+  // scene.add( spotLight );
+
+  //Text 생성
+  const createText = (message, size, position, rotation, scene, color = 0xB38FF0) => {
     const fontLoader = new FontLoader();
 
-    // transparent white start screen
-    // const startScreenGeometry = new THREE.BoxGeometry(10000, 10000, 10);
-    // const startScreenMaterial = new THREE.MeshPhysicalMaterial({
-    //     color: 0xFFFFFF,
-    //     transparent: true,
-    //     opacity: 0.75,
-    //     transmission: 0.5,
-    //     thickness: 1,
-    //     reflectivity: 1.0,
-    //     metalness: 1.0,
-    //     roughness: 0.1,
-    // });
-    // const startScreen = new THREE.Mesh(startScreenGeometry, startScreenMaterial);
-    // startScreen.position.set(0, 0, 0);
-    // scene.add(startScreen);
+    async function loadFont() {
+      const url = './PyeongChangPeaceBold_Regular.json'; //사용할 폰트 json 파일 위치(예제는 이순신 돋움)
 
-    // dual mode button for start screen
-    const dualModeGeometry = new THREE.BoxGeometry(100, 100, 100);
-
-    const dualModeMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xb38ff0,
-      transparent: true,
-      opacity: 0.3,
-      transmission: 0.5,
-      thickness: 1,
-      reflectivity: 1.0,
-      metalness: 0.0,
-      roughness: 0.5,
-    });
-
-    const dualModeButton = new THREE.Mesh(dualModeGeometry, dualModeMaterial);
-    dualModeButton.position.set(-150, 10, 50);
-    scene.add(dualModeButton);
-
-    // tournament mode button for start screen
-    const tournamentModeGeometry = new THREE.BoxGeometry(100, 100, 100);
-
-    const tournamentModeMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xb38ff0,
-      transparent: true,
-      opacity: 0.3,
-      transmission: 0.5,
-      thickness: 1,
-      reflectivity: 1.0,
-      metalness: 0.0,
-      roughness: 0.5,
-    });
-
-    const tournamentModeButton = new THREE.Mesh(
-      tournamentModeGeometry,
-      tournamentModeMaterial
-    );
-    tournamentModeButton.position.set(150, 10, 50);
-    scene.add(tournamentModeButton);
-
-    // dual text for dual mode button
-    const dualTextGeometry = new TextGeometry("DUAL", {
-      font: fontLoader.load("./PyeongChangPeaceBold_Regular.json"),
-      size: 10,
-      height: 5,
-      curveSegments: 12,
-      bevelEnabled: true,
-      bevelThickness: 1,
-      bevelSize: 0.5,
-      bevelSegments: 3,
-    });
-
-    const url = "./PyeongChangPeaceBold_Regular.json"; //사용할 폰트 json 파일 위치(예제는 이순신 돋움)
-
-    // TODO: 스코어랑 타이머, 게임 시작 전에는 스코어랑 타이머 안보이게
-    // 듀얼 모드, 토너먼트 모드 버튼 만들기
-
-    // 폰트를 load 후 처리하도록 async await 사용
-
-    // const dualTextMaterial = new THREE.MeshPhysicalMaterial({
-    //     color: 0xFFFFFF,
-    //     transparent: false,
-    //     opacity: 1.0,
-    //     transmission: 0.5,
-    //     thickness: 1,
-    //     reflectivity: 1.0,
-    //     metalness: 0.0,
-    //     roughness: 0.5,
-    // });
-
-    // const dualText = new THREE.Mesh(dualTextGeometry, dualTextMaterial);
-    // // dualModeButton.position.set(150, 10, 50);
-    // dualText.position.set(-150, 0, 20);
-    // scene.add(dualText);
-
-    // // tournament text for tournament mode button
-    // const tournamentTextGeometry = new TextGeometry("TOURNAMENT", {
-    //     font: fontLoader.load('./PyeongChangPeaceBold_Regular.json'),
-    //     size: 10,
-    //     height: 5,
-    //     curveSegments: 12,
-    //     bevelEnabled: true,
-    //     bevelThickness: 1,
-    //     bevelSize: 0.5,
-    //     bevelSegments: 3,
-    // });
-
-    // const tournamentTextMaterial = new THREE.MeshPhysicalMaterial({
-    //     color: 0x000000,
-    //     transparent: false,
-    //     opacity: 1.0,
-    //     transmission: 0.5,
-    //     thickness: 1,
-    //     reflectivity: 1.0,
-    //     metalness: 0.0,
-    //     roughness: 0.5,
-    // });
-
-    // const tournamentText = new THREE.Mesh(tournamentTextGeometry, tournamentTextMaterial);
-    // tournamentText.position.set(150, 0, 20);
-    // scene.add(tournamentText);
-
-    // gui용
-    const options = {
-      BallPositionX: 0,
-      BallPositionY: 0,
-
-      // boardWidth: 828,
-      // boardHeight: 525,
-    };
-
-    gui
-      .add(options, "BallPositionX", -boardWidth / 2, boardWidth / 2, 1)
-      .onChange((val) => {
-        ball.position.setX(val);
-      });
-    gui
-      .add(options, "BallPositionY", -boardHeight / 2, boardHeight / 2, 1)
-      .onChange((val) => {
-        ball.position.setY(val);
+      //폰트를 load 후 처리하도록 async await 사용
+      const font = await new Promise((resolve, reject) => {
+        fontLoader.load(url, resolve, undefined, reject);
       });
 
-    window.addEventListener("resize", onWindowResize);
+      const revMessage = message.split("").reverse().join("  ");
 
-    function animate() {
-      // const newResolution = new THREE.Vector2(
-      //     window.innerWidth / 1.5,
-      //     window.innerHeight / 1.5
-      //   );
-      //   material.uniforms.iResolution.value.copy(newResolution);
-      backgroundShader.uniforms.iTime.value += 0.0125;
-      renderer.render(scene, camera);
-    }
+      const geometry = new TextGeometry(revMessage, {
+        font: font,
+        size: size,
+        depth: 5,
+        curveSegments: 12,
+        bevelEnabled: true,
+        bevelThickness: 1,
+        bevelSize: 0.5,
+        bevelSegments: 3,
+      });
 
-        // Mesh가 필요
-        const p2Paddle = new THREE.Mesh(enemyPaddleGeometry, enemyPaddleMaterial);
-        p2Paddle.castShadow = true;
-        p2Paddle.position.set(0, boardHeight / 2, playerPaddleSizeZ / 2);
+      //글자 채울 Material 설정
+      const fillMaterial = new THREE.MeshPhongMaterial({ color });
+      // const scoreMaterial = new THREE.MeshPhysicalMaterial({
+      //     color: 0xFFFFFF,
+      //     transparent: false,
+      //     opacity: 1.0,
+      //     transmission: 0.5,
+      //     thickness: 1,
+      //     reflectivity: 1.0,
+      //     metalness: 0.0,
+      //     roughness: 0.5,
+      // });
+      const text = new THREE.Mesh(geometry, fillMaterial);
 
-        const myPaddleGeometry = new RoundedBoxGeometry(playerPaddleSizeX, playerPaddleSizeY, playerPaddleSizeZ, 20, 20);
-        const myPaddleMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0x90E0EF,
-            transparent: true,
-            opacity: 0.9,
-            transmission: 0.5,
-            thickness: 1,
-            reflectivity: 1.0,
-            metalness: 1.0,
-            roughness: 0.00,
+      text.position.set(position.x, position.y, position.z);
+      text.rotation.set(rotation.x, rotation.y, rotation.z);
 
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-
-      renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
-    }
-
-        const p1Paddle = new THREE.Mesh(myPaddleGeometry, myPaddleMaterial);
-        p1Paddle.position.set(0, -boardHeight / 2, playerPaddleSizeZ / 2);
-        p1Paddle.castShadow = true;
-
-        // 0, 0, 0에 add됨
-        scene.add(p1Paddle);
-        scene.add(p2Paddle);
-
-        // board 상하좌우 bars
-        const verticalBarGeometry = new RoundedBoxGeometry(25, boardHeight + 20, 100, 20, 20);
-        const barMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xB38FF0,
-            transparent: true,
-            opacity: 1.0,
-            transmission: 0.5,
-            thickness: 1,
-            reflectivity: 0.5,
-            metalness: 1.0,
-            roughness: 0.1,
-        });
-        // const horizontalBarGeometry = new RoundedBoxGeometry(boardWidth / 4 - 10, 10, playerPaddleSizeZ, 20, 20);
-        const westBar = new THREE.Mesh(verticalBarGeometry, barMaterial);
-        const eastBar = new THREE.Mesh(verticalBarGeometry, barMaterial);
-        // const leftNorthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
-        // const rightNorthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
-        // const leftSouthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
-        // const rightSouthBar = new THREE.Mesh(horizontalBarGeometry, barMaterial);
-
-
-        westBar.position.set(-boardWidth / 2 - 12.5, 0, -40);
-        eastBar.position.set(boardWidth / 2 + 12.5, 0, -40);
-        // // (boardWidth / 2) - (boardWidth / 4 - 10) == boardWidth / 4 - 10;
-        // leftNorthBar.position.set(-(boardWidth / 4 + 55), boardHeight / 2 + playerPaddleSizeY / 2, playerPaddleSizeZ);
-        // rightNorthBar.position.set(boardWidth / 4 + 55, boardHeight / 2 + playerPaddleSizeY / 2, playerPaddleSizeZ);
-        // leftSouthBar.position.set(-(boardWidth/ 4 + 55), -boardHeight / 2 - playerPaddleSizeY, playerPaddleSizeZ);
-        // rightSouthBar.position.set(boardWidth / 4 + 55, -boardHeight / 2 - playerPaddleSizeY, playerPaddleSizeZ);
-
-        scene.add(westBar);
-        scene.add(eastBar);
-        // scene.add(leftNorthBar);
-        // scene.add(rightNorthBar);
-        // scene.add(leftSouthBar);
-        // scene.add(rightSouthBar);
-
-        const ballGeometry = new THREE.SphereGeometry(ballRadius);
-        const ballMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xB38FF0,
-            transparent: true,
-            opacity: 1.0,
-            transmission: 0.5,
-            thickness: 1,
-            reflectivity: 1.0,
-            metalness: 1.0,
-            roughness: 0.1,
-        });
-        const ball = new THREE.Mesh(ballGeometry, ballMaterial);
-        ball.castShadow = true;
-        ball.position.set(0, 0, ballRadius / 2);
-        scene.add(ball);
-        // spotLight.target = ball;
-        // scene.add( spotLight );
-
-        //Text 생성
-        const createText = (message, size, position, rotation, scene, color = 0xB38FF0) => {
-            const fontLoader = new FontLoader();
-
-            async function loadFont() {
-                const url = './PyeongChangPeaceBold_Regular.json'; //사용할 폰트 json 파일 위치(예제는 이순신 돋움)
-
-                //폰트를 load 후 처리하도록 async await 사용
-                const font = await new Promise((resolve, reject) => {
-                    fontLoader.load(url, resolve, undefined, reject);
-                });
-
-                const revMessage = message.split("").reverse().join("  ");
-
-                const geometry = new TextGeometry(revMessage, {
-                    font: font,
-                    size: size,
-                    depth: 5,
-                    curveSegments: 12,
-                    bevelEnabled: true,
-                    bevelThickness: 1,
-                    bevelSize: 0.5,
-                    bevelSegments: 3,
-                });
-
-                //글자 채울 Material 설정
-                const fillMaterial = new THREE.MeshPhongMaterial({ color });
-                // const scoreMaterial = new THREE.MeshPhysicalMaterial({
-                //     color: 0xFFFFFF,
-                //     transparent: false,
-                //     opacity: 1.0,
-                //     transmission: 0.5,
-                //     thickness: 1,
-                //     reflectivity: 1.0,
-                //     metalness: 0.0,
-                //     roughness: 0.5,
-                // });
-                const text = new THREE.Mesh(geometry, fillMaterial);
-
-                text.position.set(position.x, position.y, position.z);
-                text.rotation.set(rotation.x, rotation.y, rotation.z);
-
-                if (message === "듀얼") {
-                    raycastArray[0] = text;
-                }
-                else if (message === "토너먼트") {
-                    raycastArray[1] = text;
-                }
-                
-                textArray.push(text);
-                scene.add(text);
-
-            }
-
-            loadFont();
-        }
-
-        const textRotation = new THREE.Vector3(Math.PI / 2, 0, 0);
-
-        const addScores = (player1Score, player2Score) => {
-
-            //플레이어1, 플레이어2 점수 위치
-
-            const player1ScorePosition = new THREE.Vector3(-boardWidth / 2 - 50, 200, 100);
-            const player2ScorePosition = new THREE.Vector3(boardWidth / 2 - 0, 200, 100);
-
-            // uses radians
-
-            const scoreStr1 = player1Score.toString();
-            const scoreStr2 = player2Score.toString();
-
-            createText(scoreStr1, 50, player1ScorePosition, textRotation, scene, 0xFF8FF0);
-            createText(scoreStr2, 50, player2ScorePosition, textRotation, scene, 0xB38FFF);
-
-        }
-
-        addScores(0, 0);
-
-        createText("듀얼", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xB38FF0);
-        createText("토너먼트", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xB38FF0);
-
-
-        // gui용
-        // const options = {
-        //     BallPositionX: 0,
-        //     BallPositionY: 0,
-
-        //     // boardWidth: 828,
-        //     // boardHeight: 525,
-        // };
-
-        // gui.add(options, "BallPositionX", -boardWidth / 2, boardWidth / 2, 1).onChange((val) => {
-        //     ball.position.setX(val);
-        // });
-        // gui.add(options, "BallPositionY", -boardHeight / 2, boardHeight / 2, 1).onChange((val) => {
-        //     ball.position.setY(val);
-        // });
-    document.onkeydown = function (e) {
-      handleKeyInput(e.key, 1);
-    };
-
-    document.onkeyup = function (e) {
-      handleKeyInput(e.key, 2);
-    };
-
-    function handleKeyInput(key, inputType) {
-      const queryID = 301;
-      const sessionID = 1; // This should be the actual session ID
-      const playerID = 1; // 1 for Player A, 2 for Player B
-      let inputKey;
-
-      switch (key) {
-        case "ArrowLeft":
-          inputKey = 1;
-          break;
-        case "ArrowRight":
-          inputKey = 2;
-          break;
-        default:
-          inputKey = 0;
+      if (message === "듀얼") {
+        raycastArray[0] = text;
+      }
+      else if (message === "토너먼트") {
+        raycastArray[1] = text;
       }
 
-      const message = {
-        query_id: queryID,
-        session_id: sessionID,
-        player_id: playerID,
-        input_key: inputKey,
-        input_type: inputType,
-      };
-      if (gameSocket.readyState === WebSocket.OPEN)
-        gameSocket.send(JSON.stringify(message));
+      textArray.push(text);
+      scene.add(text);
+
     }
 
-    //Text 생성
-    const createText = (message, size, scene, color = 0xb38ff0) => {
-      const fontLoader = new FontLoader();
-
-      async function loadFont() {
-        const url = "./PyeongChangPeaceBold_Regular.json"; //사용할 폰트 json 파일 위치(예제는 이순신 돋움)
-
-        //폰트를 load 후 처리하도록 async await 사용
-        const font = await new Promise((resolve, reject) => {
-          fontLoader.load(url, resolve, undefined, reject);
-        });
-
-        const geometry = new THREE.TextGeometry(message, {
-          font,
-          size,
-          height: 1,
-          curveSegments: 4,
-          bevelEnabled: false,
-        });
-
-        window.addEventListener('resize', onWindowResize);
-        container.addEventListener('mousemove', onDocumentMouseMove, false);
-        container.addEventListener('mousedown', onDocumentMouseDown, false);
-        container.addEventListener('resize', onWindowResize, false);
-        document.addEventListener(
-            "keydown",
-            (event) => {
-                // 눌린 키를 기록 (true 상태로 설정)
-                const keyName = event.key;
-                keysPressed[keyName] = true;
-
-                if (keysPressed['a']) {
-                    isP1MovingLeft = true;
-                }
-                else if (keysPressed['d']) {
-                    isP1MovingRight = true;
-                }
-                else if (keysPressed['j']) {
-                    isP2MovingLeft = true;
-                }
-                else if (keysPressed['l']) {
-                    isP2MovingRight = true;
-                }
-                else if (keysPressed['a'] && keysPressed['j']) {
-                    isP1MovingLeft = true;
-                    isP2MovingLeft = true;
-                }
-                else if (keysPressed['d'] && keysPressed['l']) {
-                    isP1MovingRight = true;
-                    isP2MovingRight = true;
-                }
-                else if (keysPressed['a'] && keysPressed['l']) {
-                    isP1MovingLeft = true;
-                    isP2MovingRight = true;
-                }
-                else if (keysPressed['d'] && keysPressed['j']) {
-                    isP1MovingRight = true;
-                    isP2MovingLeft = true;
-                }
-
-                // switch (keyName) {
-                //     case 'a':
-                //         isP1MovingLeft = true;
-                //         break;
-                //     case 'd':
-                //         isP1MovingRight = true;
-                //         break;
-
-                //     // arrow keys
-                //     case 'j':
-                //         isP2MovingLeft = true;
-                //     case 'l':
-                //         isP2MovingRight = true;
-                //         break;
-                //     // case 'right':
-                //     //     enemyPaddle.position.x += paddleSpeed;
-                //     //     break;
-                //     // case 'left':
-                //     //     enemyPaddle.position.x -= paddleSpeed;
-                //     //     break;
-                // }
-
-            },
-            false,
-        );
-        document.addEventListener(
-            "keyup",
-
-            (event) => {
-                // 떼어진 키를 기록 (false 상태로 설정)
-                keysPressed[event.key] = false;
-
-                if (event.key === 'a') {
-                    isP1MovingLeft = false;
-                }
-                else if (event.key === 'd') {
-                    isP1MovingRight = false;
-                }
-                else if (event.key === 'j') {
-                    isP2MovingLeft = false;
-                }
-                else if (event.key === 'l') {
-                    isP2MovingRight = false;
-                }
-            },
-            false,
-        );
-
-        function animate() {
-
-            backgroundShader.uniforms.iTime.value += 0.0125;
-
-
-            if (isPaddleMovable && isP1MovingLeft && p1Paddle.position.x > -boardWidth / 2 + playerPaddleSizeX / 2) {
-                p1Paddle.position.x -= paddleSpeed;
-            }
-            if (isPaddleMovable && isP1MovingRight && p1Paddle.position.x < boardWidth / 2 - playerPaddleSizeX / 2) {
-                p1Paddle.position.x += paddleSpeed;
-            }
-            if (isPaddleMovable && isP2MovingLeft && p2Paddle.position.x > -boardWidth / 2 + playerPaddleSizeX / 2) {
-                p2Paddle.position.x -= paddleSpeed;
-            }
-            if (isPaddleMovable && isP2MovingRight && p2Paddle.position.x < boardWidth / 2 - playerPaddleSizeX / 2) {
-                p2Paddle.position.x += paddleSpeed;
-            }
-
-            if (isBallMovable) {
-                ball.position.x += ballDirection.x * ballSpeed;
-                ball.position.y += ballDirection.y * ballSpeed;
-            }
-
-            // ball hits the wall
-            if (ball.position.x > boardWidth / 2 - ballRadius || ball.position.x < -boardWidth / 2 + ballRadius) {
-                ballDirection.x = -ballDirection.x;
-            }
-
-            // when ball hits the paddle
-            if (ball.position.y > boardHeight / 2 - ballRadius - playerPaddleSizeY / 2 && ball.position.x < p2Paddle.position.x + playerPaddleSizeX / 2 && ball.position.x > p2Paddle.position.x - playerPaddleSizeX / 2) {
-                calculateBallDirection(p2Paddle, ball);
-            }
-            if (ball.position.y < -boardHeight / 2 + ballRadius + playerPaddleSizeY / 2 && ball.position.x < p1Paddle.position.x + playerPaddleSizeX / 2 && ball.position.x > p1Paddle.position.x - playerPaddleSizeX / 2) {
-                calculateBallDirection(p1Paddle, ball);
-            }
-
-
-            if (ball.position.y > boardHeight / 2) {
-                player1Score += 1;
-                removeText();
-                addScores(player1Score, player2Score);
-                resetBoard();
-                setTimeout(() => {
-                    startDualRound();
-                }
-                    , 1000);
-            }
-            if (ball.position.y < -boardHeight / 2) {
-                player2Score += 1;
-                removeText();
-                addScores(player1Score, player2Score);
-                resetBoard();
-                setTimeout(() => {
-                    startDualRound();
-                }
-                    , 1000);
-            }
-
-
-            // 게임중일 때 레이캐스트 최적화
-            if (!isPaddleMovable || !isBallMovable) {
-                // find intersections
-                raycaster.setFromCamera(pointer, camera);
-
-                let intersects = raycaster.intersectObjects(scene.children);
-
-                if (intersects.length > 0) {
-                    if (SELECTED != intersects[0].object) {
-
-                        // 듀얼, 토너먼트 클릭 시 동작
-                        if (SELECTED && SELECTED.material.emissive) {
-                            SELECTED.material.emissive.setHex(SELECTED.currentHex);
-                        }
-
-                        SELECTED = intersects[0].object;
-                        if (SELECTED && SELECTED.material.emissive && (SELECTED == raycastArray[0] || SELECTED == raycastArray[1])) {
-                            SELECTED.currentHex = SELECTED.material.emissive.getHex();
-                            SELECTED.material.emissive.setHex(0xff0000);
-                        }
-                        container.style.cursor = 'pointer';
-
-                    }
-                }
-                else {
-                    if (SELECTED) {
-                        if (SELECTED.material.emissive)
-                            SELECTED.material.emissive.setHex(SELECTED.currentHex);
-                        SELECTED = null;
-                        container.style.cursor = 'auto';
-                    }
-                }
-            }
-
-
-            renderer.render(scene, camera);
-        }
-
-        function onWindowResize() {
-
-            camera.aspect = (window.innerWidth / 1.5) / (window.innerHeight / 1.5);
-            camera.updateProjectionMatrix();
-
-            renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
-
-        }
-
-        function onDocumentMouseMove(event) {
-
-            event.preventDefault();
-
-            let gapX = event.clientX - event.offsetX;
-            let gapY = event.clientY - event.offsetY;
-
-            pointer.x = ((event.clientX - gapX) / (container.clientWidth)) * 2 - 1;
-            pointer.y = -((event.clientY - gapY) / (container.clientHeight)) * 2 + 1;
-
-        }
-
-        // 듀얼과 토너먼트 클릭 시 이벤트
-        function onDocumentMouseDown(event) {
-
-            event.preventDefault();
-            if (SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[0]) {
-                console.log("clicked Dual");
-                scene.remove(raycastArray[0]);
-                scene.remove(raycastArray[1]);
-
-                startDualRound();
-
-
-            } else if (SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[1]) {
-                console.log("clicked Tournament");
-                scene.remove(raycastArray[0]);
-                scene.remove(raycastArray[1]);
-
-                startTournament();
-
-            }
-        }
-
-        function resetBoard() {
-            p1Paddle.position.set(0, -boardHeight / 2, 10);
-            p2Paddle.position.set(0, boardHeight / 2, 10);
-            ball.position.set(0, 0, 10);
-            ballDirection.set(0, 0);
-            isBallMovable = false;
-            isPaddleMovable = false;
-        }
-
-        // if ball hits the edge of the paddle, change the direction of the ball based on the paddle's position
-        function calculateBallDirection(paddle, ball) {
-            const paddleCenter = paddle.position.x;
-            const ballCenter = ball.position.x;
-
-            const diff = ballCenter - paddleCenter;
-
-            // Math.PI
-            ballDirection.x = Math.sin(diff / (playerPaddleSizeX / 2) * Math.PI / 2);
-            ballDirection.y = -ballDirection.y;
-            if (ballDirection.y < 0) {
-                ballDirection.y = -1;
-            }
-            else {
-                ballDirection.y = 1;
-            }
-        }
-
-    } else {
-        //글자 채울 Material 설정
-        const fillMaterial = new THREE.MeshPhongMaterial({ color });
-        const cube = new THREE.Mesh(geometry, fillMaterial);
-
-        //폴리곤 보여줄 LineMaterial 설정
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
-        const line = new THREE.LineSegments(
-          new THREE.WireframeGeometry(geometry),
-          lineMaterial
-        );
-
-        //글자와 폴리곤을 그룹으로 묶어줌
-        const group = new THREE.Group();
-        group.add(cube);
-        group.add(line);
-
-        scene.add(group);
-
-        textGroup.push(group);
-      }
-
-      loadFont();
-    };
-
-    //Text 재생성
-    const refreshText = (size, scene, color = 0xb38ff0) => {
-      //예외처리
-      if (textGroup.length < 1) return;
-
-      //기존 개체 index 범위 저장
-      const index = textGroup.length;
-
-      //기존 textGroup 개체를 새로 생성
-      textGroup.map((e) =>
-        createText(e.children[0].geometry.parameters.text, size, scene, color)
-      );
-
-      //기존 textGroup 개체만 scene에서 삭제
-      for (let i = 0; i < index; i++) {
-        scene.remove(textGroup[i]);
-      }
-
-      //textGroup 배열에서 기존 개체 제거
-      textGroup.splice(0, index);
-    };
-  } else {
-    const warning = WebGL.getWebGLErrorMessage();
-    document.getElementById("app").appendChild(warning);
+    loadFont();
   }
+
+  const textRotation = new THREE.Vector3(Math.PI / 2, 0, 0);
+
+  const addScores = (player1Score, player2Score) => {
+
+    //플레이어1, 플레이어2 점수 위치
+
+    const player1ScorePosition = new THREE.Vector3(-boardWidth / 2 - 50, 200, 100);
+    const player2ScorePosition = new THREE.Vector3(boardWidth / 2 - 0, 200, 100);
+
+    // uses radians
+
+    const scoreStr1 = player1Score.toString();
+    const scoreStr2 = player2Score.toString();
+
+    createText(scoreStr1, 50, player1ScorePosition, textRotation, scene, 0xFF8FF0);
+    createText(scoreStr2, 50, player2ScorePosition, textRotation, scene, 0xB38FFF);
+
+  }
+
+  addScores(0, 0);
+
+  createText("듀얼", 20, new THREE.Vector3(-80, -100, 100), textRotation, scene, 0xB38FF0);
+  createText("토너먼트", 20, new THREE.Vector3(100, -100, 100), textRotation, scene, 0xB38FF0);
+
+
+  // gui용
+  // const options = {
+  //     BallPositionX: 0,
+  //     BallPositionY: 0,
+
+  //     // boardWidth: 828,
+  //     // boardHeight: 525,
+  // };
+
+  // gui.add(options, "BallPositionX", -boardWidth / 2, boardWidth / 2, 1).onChange((val) => {
+  //     ball.position.setX(val);
+  // });
+  // gui.add(options, "BallPositionY", -boardHeight / 2, boardHeight / 2, 1).onChange((val) => {
+  //     ball.position.setY(val);
+  // });
+
+
+  window.addEventListener('resize', onWindowResize);
+  pongContainer.addEventListener('mousemove', onDocumentMouseMove, false);
+  pongContainer.addEventListener('mousedown', onDocumentMouseDown, false);
+
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      // 눌린 키를 기록 (true 상태로 설정)
+      const keyName = event.key;
+      keysPressed[keyName] = true;
+
+      if (keysPressed['a']) {
+        isP1MovingLeft = true;
+      }
+      else if (keysPressed['d']) {
+        isP1MovingRight = true;
+      }
+      else if (keysPressed['j']) {
+        isP2MovingLeft = true;
+      }
+      else if (keysPressed['l']) {
+        isP2MovingRight = true;
+      }
+      else if (keysPressed['a'] && keysPressed['j']) {
+        isP1MovingLeft = true;
+        isP2MovingLeft = true;
+      }
+      else if (keysPressed['d'] && keysPressed['l']) {
+        isP1MovingRight = true;
+        isP2MovingRight = true;
+      }
+      else if (keysPressed['a'] && keysPressed['l']) {
+        isP1MovingLeft = true;
+        isP2MovingRight = true;
+      }
+      else if (keysPressed['d'] && keysPressed['j']) {
+        isP1MovingRight = true;
+        isP2MovingLeft = true;
+      }
+
+      // switch (keyName) {
+      //     case 'a':
+      //         isP1MovingLeft = true;
+      //         break;
+      //     case 'd':
+      //         isP1MovingRight = true;
+      //         break;
+
+      //     // arrow keys
+      //     case 'j':
+      //         isP2MovingLeft = true;
+      //     case 'l':
+      //         isP2MovingRight = true;
+      //         break;
+      //     // case 'right':
+      //     //     enemyPaddle.position.x += paddleSpeed;
+      //     //     break;
+      //     // case 'left':
+      //     //     enemyPaddle.position.x -= paddleSpeed;
+      //     //     break;
+      // }
+
+    },
+    false,
+  );
+  document.addEventListener(
+    "keyup",
+
+    (event) => {
+      // 떼어진 키를 기록 (false 상태로 설정)
+      keysPressed[event.key] = false;
+
+      if (event.key === 'a') {
+        isP1MovingLeft = false;
+      }
+      else if (event.key === 'd') {
+        isP1MovingRight = false;
+      }
+      else if (event.key === 'j') {
+        isP2MovingLeft = false;
+      }
+      else if (event.key === 'l') {
+        isP2MovingRight = false;
+      }
+    },
+    false,
+  );
+
+  function animate() {
+
+    backgroundShader.uniforms.iTime.value += 0.0125;
+
+
+    if (isPaddleMovable && isP1MovingLeft && p1Paddle.position.x > -boardWidth / 2 + playerPaddleSizeX / 2) {
+      p1Paddle.position.x -= paddleSpeed;
+    }
+    if (isPaddleMovable && isP1MovingRight && p1Paddle.position.x < boardWidth / 2 - playerPaddleSizeX / 2) {
+      p1Paddle.position.x += paddleSpeed;
+    }
+    if (isPaddleMovable && isP2MovingLeft && p2Paddle.position.x > -boardWidth / 2 + playerPaddleSizeX / 2) {
+      p2Paddle.position.x -= paddleSpeed;
+    }
+    if (isPaddleMovable && isP2MovingRight && p2Paddle.position.x < boardWidth / 2 - playerPaddleSizeX / 2) {
+      p2Paddle.position.x += paddleSpeed;
+    }
+
+    if (isBallMovable) {
+      ball.position.x += ballDirection.x * ballSpeed;
+      ball.position.y += ballDirection.y * ballSpeed;
+    }
+
+    // ball hits the wall
+    if (ball.position.x > boardWidth / 2 - ballRadius || ball.position.x < -boardWidth / 2 + ballRadius) {
+      ballDirection.x = -ballDirection.x;
+    }
+
+    // when ball hits the paddle
+    if (ball.position.y > boardHeight / 2 - ballRadius - playerPaddleSizeY / 2 && ball.position.x < p2Paddle.position.x + playerPaddleSizeX / 2 && ball.position.x > p2Paddle.position.x - playerPaddleSizeX / 2) {
+      calculateBallDirection(p2Paddle, ball);
+    }
+    if (ball.position.y < -boardHeight / 2 + ballRadius + playerPaddleSizeY / 2 && ball.position.x < p1Paddle.position.x + playerPaddleSizeX / 2 && ball.position.x > p1Paddle.position.x - playerPaddleSizeX / 2) {
+      calculateBallDirection(p1Paddle, ball);
+    }
+
+
+    if (ball.position.y > boardHeight / 2) {
+      player1Score += 1;
+      removeText();
+      addScores(player1Score, player2Score);
+      resetBoard();
+      setTimeout(() => {
+        if (tournamentP1 && tournamentP2 && tournamentP3 && tournamentP4) {
+          startTournamentRound();
+        }
+        else if (opponent) {
+          startDualRound();
+        }
+      }
+        , 1000);
+    }
+    if (ball.position.y < -boardHeight / 2) {
+      player2Score += 1;
+      removeText();
+      addScores(player1Score, player2Score);
+      resetBoard();
+      setTimeout(() => {
+        if (tournamentP1 && tournamentP2 && tournamentP3 && tournamentP4) {
+          startTournamentRound();
+        }
+        else if (opponent) {
+          startDualRound();
+        }
+      }, 1000);
+    }
+
+
+    // 게임중일 때 레이캐스트 최적화
+    if (!isPaddleMovable || !isBallMovable) {
+      // find intersections
+      raycaster.setFromCamera(pointer, camera);
+
+      let intersects = raycaster.intersectObjects(scene.children);
+
+      if (intersects.length > 0) {
+        if (SELECTED != intersects[0].object) {
+
+          // 듀얼, 토너먼트 클릭 시 동작
+          if (SELECTED && SELECTED.material.emissive) {
+            SELECTED.material.emissive.setHex(SELECTED.currentHex);
+          }
+
+          SELECTED = intersects[0].object;
+          if (SELECTED && SELECTED.material.emissive && (SELECTED == raycastArray[0] || SELECTED == raycastArray[1])) {
+            SELECTED.currentHex = SELECTED.material.emissive.getHex();
+            SELECTED.material.emissive.setHex(0xff0000);
+          }
+        }
+      }
+      else {
+        if (SELECTED) {
+          if (SELECTED.material.emissive)
+            SELECTED.material.emissive.setHex(SELECTED.currentHex);
+          SELECTED = null;
+        }
+      }
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  function onWindowResize() {
+
+    camera.aspect = (window.innerWidth / 1.5) / (window.innerHeight / 1.5);
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
+
+  }
+
+  function onDocumentMouseMove(event) {
+
+    event.preventDefault();
+
+    let gapX = event.clientX - event.offsetX;
+    let gapY = event.clientY - event.offsetY;
+
+    pointer.x = ((event.clientX - gapX) / (pongContainer.clientWidth)) * 2 - 1;
+    pointer.y = -((event.clientY - gapY) / (pongContainer.clientHeight)) * 2 + 1;
+
+  }
+
+  // 듀얼과 토너먼트 클릭 시 이벤트
+  function onDocumentMouseDown(event) {
+
+    event.preventDefault();
+    if (SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[0]) {
+      console.log("clicked Dual");
+
+      if (opponent) {
+        scene.remove(raycastArray[0]);
+        scene.remove(raycastArray[1]);
+        startDualRound();
+      }
+      else {
+        alert("토너먼트를 선택해주세요.");
+      }
+
+
+    } else if (SELECTED && SELECTED.material.emissive && SELECTED == raycastArray[1]) {
+      console.log("clicked Tournament");
+
+      if (tournamentP1 && tournamentP2 && tournamentP3 && tournamentP4) {
+        scene.remove(raycastArray[0]);
+        scene.remove(raycastArray[1]);
+        startTournamentRound();
+      }
+      else {
+        alert("듀얼을 선택해주세요.");
+      }
+
+    }
+  }
+
+  function resetBoard() {
+    p1Paddle.position.set(0, -boardHeight / 2, 10);
+    p2Paddle.position.set(0, boardHeight / 2, 10);
+    ball.position.set(0, 0, 10);
+    ballDirection.set(0, 0);
+    isBallMovable = false;
+    isPaddleMovable = false;
+  }
+
+  // if ball hits the edge of the paddle, change the direction of the ball based on the paddle's position
+  function calculateBallDirection(paddle, ball) {
+    const paddleCenter = paddle.position.x;
+    const ballCenter = ball.position.x;
+
+    const diff = ballCenter - paddleCenter;
+
+    // Math.PI
+    ballDirection.x = Math.sin(diff / (playerPaddleSizeX / 2) * Math.PI / 2);
+    ballDirection.y = -ballDirection.y;
+    if (ballDirection.y < 0) {
+      ballDirection.y = -1;
+    }
+    else {
+      ballDirection.y = 1;
+    }
+  }
+
+} else {
+
+  const warning = WebGL.getWebGLErrorMessage();
+  document.getElementById('app').appendChild(warning);
+
 }
+}
+
+
+
+
+
