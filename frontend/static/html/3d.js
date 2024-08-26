@@ -11,6 +11,7 @@ import { RoundedBoxGeometry } from 'RoundedBoxGeometry';
 import { GUI } from 'GUI';
 import { FontLoader } from 'FontLoader';
 import { TextGeometry } from 'TextGeometry';
+import { createPongRecord } from './record.js';
 
 // import { text } from 'express';
 // import { MathUtils } from 'MathUtils';
@@ -121,7 +122,7 @@ function makeDualTournamentsButtons() {
       } else if (opponentInput.value === username) {
         alert("자신을 상대로 할 수 없습니다.");
         return;
-      }
+      } 
 
       e.preventDefault();
       // oppenent만 local storage에 저장
@@ -275,10 +276,12 @@ function init() {
           createText(username + " win!", 10, new THREE.Vector3(60, 0, 100), textRotation, scene, 0xFF8FF0);
           resetBoard();
           removeText();
+          createPongRecord(username, opponent);
         } else {
           createText(opponent + " win!", 10, new THREE.Vector3(60, 0, 100), textRotation, scene, 0xFF8FF0);
           resetBoard();
           removeText();
+          createPongRecord(opponent, username);
         }
         setTimeout(() => {
           // sendResult();
