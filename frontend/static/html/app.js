@@ -33,9 +33,9 @@ async function updateContent() {
   const path = window.location.pathname;
   const renderFunction = routes[path] || routes["/"];
   app.innerHTML = "";
-  if (path === "/game") {
-    // removeGame();
-  }
+  // if (path !== "/game") {
+  //   removeGame();
+  // }
   await renderFunction(app);
   updateNav();
 }

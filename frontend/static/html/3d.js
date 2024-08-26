@@ -51,22 +51,14 @@ const keysPressed = {};
 let appContainer = document.getElementById('app');
 let pongContainer;
 
+let scene, renderer;  // Declared globally to be accessed in removeGame()
+
 export function renderGame() {
 
   makeDualTournamentsButtons();
 
 }
 
-export function removeGame() {
-  while (scene.children.length > 0) {
-    scene.remove(scene.children[0]);
-  }
-
-  const app = document.getElementById('app');
-  while (app.firstChild) {
-    app.removeChild(app.firstChild);
-  }
-}
 
 function sendResult() {
   const result = {
@@ -131,7 +123,7 @@ function makeDualTournamentsButtons() {
 
       removeChildNodes(appContainer);
 
-      init();
+      initGame();
     });
   });
 
@@ -216,7 +208,7 @@ function makeDualTournamentsButtons() {
 
       removeChildNodes(appContainer);
 
-      init();
+      initGame();
     });
   });
 
@@ -228,7 +220,7 @@ function makeDualTournamentsButtons() {
 /* --------------------- THREE.js game logic starts --------------------- */
 
 // 씬 만들기
-function init() {
+export function initGame() {
 
   if (WebGL.isWebGLAvailable()) {
 
@@ -251,7 +243,7 @@ function init() {
     isBallMovable = false;
     ballDirection.set(0, 0);
 
-    const scene = new THREE.Scene();
+    scene = new THREE.Scene();
     // const gui = new GUI();
     //textGeometry를 담을 배열
 
@@ -441,7 +433,7 @@ function init() {
 
   // 렌더러 만들기, 브라우저 윈도우만큼 사이즈를 지정해 주었는데 다른 경우도 가능할 듯?
   // window.innerWidth/2 and window.innerHeight/2 라고 한다.
-  const renderer = new THREE.WebGLRenderer({
+  renderer = new THREE.WebGLRenderer({
     antialias: true,
   });
 
@@ -845,6 +837,14 @@ void main()
   // });
 
 
+  function onWindowResize() {
+
+    camera.aspect = (window.innerWidth / 1.5) / (window.innerHeight / 1.5);
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
+
+  }
   window.addEventListener('resize', onWindowResize);
   pongContainer.addEventListener('mousemove', onDocumentMouseMove, false);
   pongContainer.addEventListener('mousedown', onDocumentMouseDown, false);
@@ -855,7 +855,7 @@ void main()
       // 눌린 키를 기록 (true 상태로 설정)
       const keyName = event.key;
       keysPressed[keyName] = true;
-
+      // console.log(keyName + ' pressed');
       if (keysPressed['a']) {
         isP1MovingLeft = true;
       }
@@ -867,22 +867,6 @@ void main()
       }
       else if (keysPressed['l']) {
         isP2MovingRight = true;
-      }
-      else if (keysPressed['a'] && keysPressed['j']) {
-        isP1MovingLeft = true;
-        isP2MovingLeft = true;
-      }
-      else if (keysPressed['d'] && keysPressed['l']) {
-        isP1MovingRight = true;
-        isP2MovingRight = true;
-      }
-      else if (keysPressed['a'] && keysPressed['l']) {
-        isP1MovingLeft = true;
-        isP2MovingRight = true;
-      }
-      else if (keysPressed['d'] && keysPressed['j']) {
-        isP1MovingRight = true;
-        isP2MovingLeft = true;
       }
 
       // switch (keyName) {
@@ -916,7 +900,7 @@ void main()
     (event) => {
       // 떼어진 키를 기록 (false 상태로 설정)
       keysPressed[event.key] = false;
-
+      // console.log(event.key + ' released');
       if (event.key === 'a') {
         isP1MovingLeft = false;
       }
@@ -932,22 +916,69 @@ void main()
     },
     false,
   );
-
+  function removeGame() {
+    if (scene) {
+      while (scene.children.length > 0) {
+        const child = scene.children[0];
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(mat => {
+              if (mat.map) mat.map.dispose();
+              mat.dispose();
+            });
+          } else {
+            if (child.material.map) child.material.map.dispose();
+            child.material.dispose();
+          }
+        }
+        scene.remove(child);
+      }
+    }
+  
+    if (renderer) {
+      renderer.dispose();
+    }
+  
+    window.removeEventListener('resize', onWindowResize);
+    pongContainer.removeEventListener('mousemove', onDocumentMouseMove, false);
+    pongContainer.removeEventListener('mousedown', onDocumentMouseDown, false);
+    
+    // TODO : 이벤트 리스너 제거
+    // document.removeEventListener('keydown', onKeyDown, false);
+    // document.removeEventListener('keyup', onKeyUp, false);
+  
+    const app = document.getElementById('app');
+    while (app.firstChild) {
+      app.removeChild(app.firstChild);
+    }
+  }
+  
   function animate() {
-
+    
+      if (window.location.pathname !== '/game') {
+        renderer.setAnimationLoop(null);
+         removeGame();
+         return ;
+      }
+    
     backgroundShader.uniforms.iTime.value += 0.0125;
 
 
     if (isPaddleMovable && isP1MovingLeft && p1Paddle.position.x > -boardWidth / 2 + playerPaddleSizeX / 2) {
+      console.log("x left", p1Paddle.position.x);
       p1Paddle.position.x -= paddleSpeed;
     }
     if (isPaddleMovable && isP1MovingRight && p1Paddle.position.x < boardWidth / 2 - playerPaddleSizeX / 2) {
+      console.log("x right", p1Paddle.position.x);
       p1Paddle.position.x += paddleSpeed;
     }
     if (isPaddleMovable && isP2MovingLeft && p2Paddle.position.x > -boardWidth / 2 + playerPaddleSizeX / 2) {
+      console.log("y left", p2Paddle.position.x);
       p2Paddle.position.x -= paddleSpeed;
     }
     if (isPaddleMovable && isP2MovingRight && p2Paddle.position.x < boardWidth / 2 - playerPaddleSizeX / 2) {
+      console.log("y Right", p2Paddle.position.x);
       p2Paddle.position.x += paddleSpeed;
     }
 
@@ -1035,14 +1066,6 @@ void main()
     renderer.render(scene, camera);
   }
 
-  function onWindowResize() {
-
-    camera.aspect = (window.innerWidth / 1.5) / (window.innerHeight / 1.5);
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(window.innerWidth / 1.5, window.innerHeight / 1.5);
-
-  }
 
   function onDocumentMouseMove(event) {
 
