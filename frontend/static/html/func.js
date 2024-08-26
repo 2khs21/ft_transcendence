@@ -4,7 +4,7 @@ import { authenticatedFetch } from "./auth.js";
 // 특정 사용자의 상세 정보를 가져오는 함수
 export async function getUserDetails(username) {
   try {
-    const response = await fetch(`/api/users/${username}/`);
+    const response = await authenticatedFetch(`/api/users/${username}/`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
