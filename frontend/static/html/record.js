@@ -43,7 +43,7 @@ export async function createPongRecord(winnerUsername, loserUsername) {
 
 // 특정 사용자가 포함된 게임 기록만 필터링하는 함수
 function filterUserGames(records, username) {
-  console.log("fileter usergames" + username);
+  console.log("fileter usergames " + username);
 
   console.log(
     records.filter(
