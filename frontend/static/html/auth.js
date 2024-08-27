@@ -1,13 +1,10 @@
 // auth.js
 
-function isTokenValid() {
+async function isTokenValid() {
   const token = localStorage.getItem("accessToken");
   if (!token) return false;
 
-  // JWT 디코딩 (간단한 구현, 실제 환경에서는 더 안전한 방법 사용 권장)
-  const payload = JSON.parse(atob(token.split(".")[1]));
-
-  // 토큰 만료 시간 확인
+  const payload = await JSON.parse(atob(token.split(".")[1]));
   if (payload.exp) {
     return payload.exp * 1000 > Date.now();
   }
@@ -17,8 +14,10 @@ function isTokenValid() {
 
 // 토큰 갱신 함수
 async function refreshToken() {
+  console.log("refreshToken!!");
   try {
     const refreshToken = localStorage.getItem("refreshToken");
+    console.log("refreshToken : ", refreshToken);
     if (!refreshToken) {
       throw new Error("No refresh token available");
     }
@@ -51,6 +50,7 @@ async function refreshToken() {
 
 // 로그아웃 함수
 function logout() {
+  console.log("logout!!");
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("username");
@@ -59,19 +59,52 @@ function logout() {
 }
 
 // 인증된 API 요청을 보내는 함수
+// export async function authenticatedFetch(url, options = {}) {
+//   if (!isTokenValid()) {
+//     const refreshed = await refreshToken();
+//     if (!refreshed) {
+//       throw new Error("Authentication failed");
+//     }
+//   }
+
+//   const token = localStorage.getItem("accessToken");
+//   const headers = {
+//     ...options.headers,
+//     Authorization: `Bearer ${token}`,
+//   };
+
+//   return await fetch(url, { ...options, headers });
+// }
+
+/// 새로고침 수정!
 export async function authenticatedFetch(url, options = {}) {
-  if (!isTokenValid()) {
-    const refreshed = await refreshToken();
-    if (!refreshed) {
-      throw new Error("Authentication failed");
+  let retries = 3;
+  while (retries > 0) {
+    if (!(await isTokenValid())) {
+      const refreshed = await refreshToken();
+      if (!refreshed) {
+        retries--;
+        if (retries === 0) {
+          logout();
+          throw new Error("Authentication failed");
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // 1초 대기
+        continue;
+      }
+    }
+
+    const token = localStorage.getItem("accessToken");
+    const headers = {
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+    };
+
+    try {
+      return await fetch(url, { ...options, headers });
+    } catch (error) {
+      retries--;
+      if (retries === 0) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // 1초 대기
     }
   }
-
-  const token = localStorage.getItem("accessToken");
-  const headers = {
-    ...options.headers,
-    Authorization: `Bearer ${token}`,
-  };
-
-  return fetch(url, { ...options, headers });
 }

@@ -66,6 +66,7 @@ function setupWebSocket() {
   chatSocket.onopen = async function (e) {
     console.log("WebSocket connection established");
     const username = localStorage.getItem("username");
+    console.log("username : ", username);
     if (username) {
       try {
         await updateUserConnection(username, true); // 연결 상태를 true로 업데이트
@@ -203,7 +204,11 @@ async function handleSpecialCommands(message, username) {
       return true;
     }
   }
-  if (message.startsWith("/") && !message.startsWith("/w  ") && !message.startsWith("/invite ")) {
+  if (
+    message.startsWith("/") &&
+    !message.startsWith("/w  ") &&
+    !message.startsWith("/invite ")
+  ) {
     displayMessage({
       message: `/w, /befriend, /unfriend, /mute, /unmute, /profile 명령어를 사용할 수 있습니다.`,
       username: "System",

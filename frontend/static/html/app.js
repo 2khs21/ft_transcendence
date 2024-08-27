@@ -29,27 +29,55 @@ export function navigate(path) {
   updateContent();
 }
 
-async function updateContent() {
-  const path = window.location.pathname;
-  const renderFunction = routes[path] || routes["/"];
-  app.innerHTML = "";
-  // if (path !== "/game") {
-  //   removeGame();
-  // }
-  await renderFunction(app);
-  updateNav();
-}
+let isUpdating = false;
 
+async function updateContent() {
+  if (isUpdating) return;
+  isUpdating = true;
+
+  try {
+    const path = window.location.pathname;
+    console.log("updateContent start: ", path);
+    const renderFunction = routes[path] || routes["/"];
+    app.innerHTML = "";
+    await checkAuthState();
+    if (authState.isLoggedIn || path === "/login" || path === "/register") {
+      console.log("updateContent : ", path);
+      await renderFunction(app);
+    } else {
+      console.log("updateContent : login page...");
+      navigate("/login");
+    }
+    updateNav();
+  } finally {
+    isUpdating = false;
+  }
+}
 function updateNav() {
   const isLoggedIn = !!localStorage.getItem("accessToken");
   nav.style.display = isLoggedIn ? "block" : "none";
 }
 
 async function handleOAuthCallback() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const accessToken = urlParams.get("access_token");
-  const refreshToken = urlParams.get("refresh_token");
-
+  let accessToken;
+  let refreshToken;
+  if (
+    localStorage.getItem("accessToken") &&
+    localStorage.getItem("refreshToken")
+  ) {
+    accessToken = localStorage.getItem("accessToken");
+    refreshToken = localStorage.getItem("refreshToken");
+  } else {
+    console.log("handleOauthCallback path : ", window.location.pathname);
+    const urlParams = new URLSearchParams(window.location.search);
+    accessToken = urlParams.get("access_token");
+    refreshToken = urlParams.get("refresh_token");
+    console.log("look at me");
+    console.log("urlParams : ", urlParams);
+    console.log("accessToken : ", accessToken);
+    console.log("refreshToken : ", refreshToken);
+    console.log("handle OAuth callback");
+  }
   if (accessToken && refreshToken) {
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
@@ -66,17 +94,38 @@ async function handleOAuthCallback() {
     navigate("/");
   } else {
     // 토큰이 없는 경우 로그인 페이지로 리다이렉트
+    console.log("No tokens found in URL. Redirecting to login page...");
     navigate("/login");
   }
 }
 
 // 로그인 상태를 확인하는 함수
-function checkAuthState() {
+async function checkAuthState() {
+  console.log("checkAuthState start");
   const accessToken = localStorage.getItem("accessToken");
-  authState.isLoggedIn = accessToken;
-  if (!accessToken) {
-    console.log("checkAuthState. login page...");
-    navigate("/login");
+  console.log("accessToken : ", accessToken);
+  if (accessToken) {
+    try {
+      console.log("Fetch /api/users/verify-token/");
+      const response = await fetch("/api/users/verify-token/", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (response.ok) {
+        console.log("Token is valid");
+        authState.isLoggedIn = true;
+      } else {
+        console.log("Token verification failed");
+        throw new Error("Invalid token");
+      }
+    } catch (error) {
+      console.log("Token verification failed:", error);
+      console.error("Token verification failed:", error);
+      await handleLogout();
+    }
+  } else {
+    authState.isLoggedIn = false;
   }
 }
 
@@ -118,8 +167,11 @@ function initEventListeners() {
 }
 async function init() {
   handleOAuthCallback();
-  checkAuthState();
+  console.log("handleOAuthCallback end");
+  await checkAuthState();
+  console.log("checkAuthState end");
   await updateContent();
+  console.log("updateContent end");
   initEventListeners();
   // initializeChat();
 }
@@ -127,6 +179,7 @@ async function init() {
 document.addEventListener("DOMContentLoaded", init);
 
 export async function handleLogout() {
+  console.log("handleLogout start");
   try {
     const response = await fetch("/api/users/logout/", {
       method: "POST",
@@ -143,6 +196,7 @@ export async function handleLogout() {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     removeChatUI();
+    console.log("removeChatUI");
     console.log("User logged out successfully");
     console.log("Logout, close chatSocket, remove chatui");
     chatSocket.close();

@@ -425,3 +425,13 @@ class LogoutView(APIView):
         # 예: 토큰 무효화, 세션 삭제 등
         
         return Response({"status": "success", "message": "Successfully logged out"}, status=status.HTTP_200_OK)
+
+
+## token verify
+from rest_framework.permissions import IsAuthenticated
+
+class VerifyTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({"detail": "Token is valid"}, status=status.HTTP_200_OK)
