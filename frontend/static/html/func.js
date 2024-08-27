@@ -171,6 +171,6 @@ export async function checkFriendRelation(user1, user2) {
       error
     );
     console.log("Error checking friend relation!!!!!!!!!!!!!");
-    return JSON.stringify({ isFriend: false, isFollowing: false });
+    return { isFriend: false, isFollowing: false };
   }
 }
