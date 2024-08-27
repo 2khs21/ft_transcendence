@@ -152,3 +152,24 @@ export async function getOtherUserProfile(username) {
     return null;
   }
 }
+
+export async function checkFriendRelation(user1, user2) {
+  try {
+    console.log(`Checking friend relation between ${user1} and ${user2}...`);
+    const response = await authenticatedFetch(
+      `/api/users/check-friend-relation/${user1}/${user2}/`
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    console.log(`Friend relation: ${JSON.stringify(data)}`);
+    return data;
+  } catch (error) {
+    console.error(
+      `Error checking friend relation between ${user1} and ${user2}:`,
+      error
+    );
+    return { is_friend: false, is_friended_by: false };
+  }
+}

@@ -1,6 +1,6 @@
 #users/urls.py
 from django.urls import path
-from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView, FriendView, MuteView, PongRecordListCreateView,LogoutView,VerifyEmailView, SendVerificationEmailView, VerifyTokenView
+from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView, FriendView, MuteView, PongRecordListCreateView,LogoutView,VerifyEmailView, SendVerificationEmailView, VerifyTokenView, CheckFriendRelationView
 from . import views
 
 urlpatterns = [
@@ -29,5 +29,6 @@ urlpatterns = [
 	path('oauth/login/', views.oauth_login, name='oauth_login'),
 	path('oauth/callback/', views.oauth_callback, name='oauth_callback'),
 	path('logout/', LogoutView.as_view(), name='logout'),
+    path('check-friend-relation/<str:user1>/<str:user2>/', CheckFriendRelationView.as_view(), name='check-friend-relation'),
 
 ]
