@@ -57,7 +57,7 @@ export async function renderHome(container) {
     await updateLists();
   }
   // Set up an interval to update the lists every 30 seconds
-  updateInterval = setInterval(updateLists, 30000);
+  // updateInterval = setInterval(updateLists, 30000);
 
   // Set up event listener for chat actions
   document.addEventListener("chatActionPerformed", updateLists);
@@ -99,9 +99,9 @@ function updateList(listId, items, textExtractor) {
 
 export function cleanupHome() {
   // Clear the update interval when leaving the home page
-  if (updateInterval) {
-    clearInterval(updateInterval);
-  }
+  // if (updateInterval) {
+  //   clearInterval(updateInterval);
+  // }
 
   // Remove event listeners
   if (updateListsFunction) {
