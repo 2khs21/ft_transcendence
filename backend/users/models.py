@@ -35,7 +35,7 @@ class User(AbstractUser):
         verbose_name='user permissions',
         help_text='Specific permissions for this user.',
     )
-
+    
     def follow(self, user):
         """주어진 사용자를 팔로우합니다."""
         if not self.is_following(user):

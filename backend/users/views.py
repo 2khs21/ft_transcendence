@@ -171,6 +171,8 @@ class FollowUserView(APIView):
             
             # 팔로우 실행
             request.user.follow(user_to_follow)
+            print(f"User {request.user.username} is now following {user_to_follow.username}")
+            print(f"Is following check: {request.user.is_following(user_to_follow)}")
             return Response({"detail": f"You are now following {username_to_follow}"}, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -435,3 +437,31 @@ class VerifyTokenView(APIView):
 
     def get(self, request):
         return Response({"detail": "Token is valid"}, status=status.HTTP_200_OK)
+
+
+# check friend relation
+class CheckFriendRelationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user1, user2):
+        try:
+            user1 = User.objects.get(username=user1)
+            user2 = User.objects.get(username=user2)
+
+            is_friend = user1.is_friend(user2)
+            is_friended_by = user2.is_friend(user1)
+
+            # 디버깅을 위한 로그 추가
+            print(f"User1: {user1.username}, User2: {user2.username}")
+            print(f"Is friend: {is_friend}, Is friended by: {is_friended_by}")
+            print(f"User1's friends: {list(user1.friends.all())}")
+            print(f"User2's friends: {list(user2.friends.all())}")
+
+            return Response({
+                "is_friend": is_friend,
+                "is_friended_by": is_friended_by
+            }, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "One or both users do not exist"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

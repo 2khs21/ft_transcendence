@@ -16,6 +16,26 @@ async function fetchUsername() {
     return null;
   }
 }
+
+async function fetchUserEmail() {
+  try {
+    const profileData = await fetchProfileData();
+    if (profileData && profileData.email) {
+      return profileData.email;
+    } else {
+      throw new Error("Username not found in the profile data");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    return null;
+  }
+}
+
+export async function getUserEmail() {
+  let userEmail = await fetchUserEmail();
+  return userEmail;
+}
+
 export async function getUsername() {
   let username = await fetchUsername();
   return username;
