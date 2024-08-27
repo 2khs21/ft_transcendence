@@ -52,7 +52,7 @@ let pongContainer;
 
 let scene, renderer; // Declared globally to be accessed in removeGame()
 
-export function renderGame() {
+export async function renderGame() {
   makeDualTournamentsButtons();
 }
 
@@ -69,7 +69,7 @@ function removeChildNodes(parent) {
   }
 }
 
-function makeDualTournamentsButtons() {
+async function makeDualTournamentsButtons() {
   const dualButton = document.createElement("button");
   dualButton.textContent = "듀얼";
   dualButton.addEventListener("click", () => {
@@ -107,21 +107,16 @@ function makeDualTournamentsButtons() {
         alert("자신을 상대로 할 수 없습니다.");
         return;
       }
-      const json = await checkFriendRelation(username, opponentInput.value);
-      console.log(json);
-      if (json["is_friend"] === false || json["is_friended_by"] === false) {
+      e.preventDefault();
+      const hsjson = await checkFriendRelation(username, opponentInput.value);
+      if (hsjson["is_friend"] === false || hsjson["is_friended_by"] === false) {
         alert("서로 팔로우되어있지 않습니다.");
         return;
       }
-    
-    
-      e.preventDefault();
       // oppenent만 local storage에 저장
       const opponent = document.getElementById("opponentInput").value;
       localStorage.setItem("opponent", opponent);
-    
       removeChildNodes(appContainer);
-    
       initGame();
     });
   });
