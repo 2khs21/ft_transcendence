@@ -1,12 +1,14 @@
 #users/urls.py
 from django.urls import path
-from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView, FriendView, MuteView, PongRecordListCreateView,LogoutView,VerifyEmailView, SendVerificationEmailView
+from .views import RegisterView, LoginView, FollowUserView, UserProfileView, OtherUserProfileView, UserListView, FriendView, MuteView, PongRecordListCreateView,LogoutView,VerifyEmailView, SendVerificationEmailView, VerifyTokenView
 from . import views
 
 urlpatterns = [
 	path('', UserListView.as_view(), name='user-list'),
 	path('friend/', FriendView.as_view(), name='friend'),
 	path('mute/', MuteView.as_view(), name='mute'),
+
+	path('verify-token/', VerifyTokenView.as_view(), name='verify-token'),
 
 	path('register/', RegisterView.as_view(), name='register'),
 	path('login/', LoginView.as_view(), name='login'),

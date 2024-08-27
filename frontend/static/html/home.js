@@ -8,13 +8,16 @@ import {
   getMutedList,
   getConnectedUsers,
 } from "./func.js";
+import { authenticatedFetch } from "./auth.js";
 
-let updateInterval;
+// let updateInterval;
 let updateListsFunction; // 함수 저장
 
 export async function renderHome(container) {
+  console.log("Rendering home page...");
   const accessToken = localStorage.getItem("accessToken");
-
+  console.log("accessToken : ", accessToken);
+  console.log("*************************");
   if (!accessToken) {
     console.log("No access token found. home-> login page...");
     navigate("/login");
@@ -22,11 +25,8 @@ export async function renderHome(container) {
   }
 
   try {
-    const response = await fetch("/api/users/profile/", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    console.log("Fetching user data... profile");
+    const response = await authenticatedFetch("/api/users/profile/");
 
     if (!response.ok) {
       throw new Error("Failed to fetch user data");
@@ -47,6 +47,7 @@ export async function renderHome(container) {
     `;
   } catch (error) {
     console.error("Error:", error);
+    console.log("Failed to load user data. Please try logging in again.");
     container.innerHTML =
       "<p>Failed to load user data. Please try logging in again.</p>";
     localStorage.removeItem("accessToken");
