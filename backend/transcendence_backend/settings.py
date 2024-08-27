@@ -212,7 +212,7 @@ AUTH_USER_MODEL = 'users.User'
 
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False
 CSRF_USE_SESSIONS = False  # 세션 대신 쿠키 사용
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",  # 예시: 프론트엔드가 동작하는 로컬 호스트 주소
