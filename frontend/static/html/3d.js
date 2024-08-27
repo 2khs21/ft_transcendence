@@ -109,6 +109,7 @@ async function makeDualTournamentsButtons() {
       }
       e.preventDefault();
       const hsjson = await checkFriendRelation(username, opponentInput.value);
+      console.log("lookkkkkkk :  ", hsjson);
       if (hsjson["is_friend"] === false || hsjson["is_friended_by"] === false) {
         alert("서로 팔로우되어있지 않습니다.");
         return;
