@@ -11,6 +11,7 @@ import { GUI } from "GUI";
 import { FontLoader } from "FontLoader";
 import { TextGeometry } from "TextGeometry";
 import { createPongRecord } from "./record.js";
+import { checkFriendRelation } from "./func.js";
 
 // import { text } from 'express';
 // import { MathUtils } from 'MathUtils';
@@ -80,6 +81,7 @@ function makeDualTournamentsButtons() {
     localStorage.removeItem("tournamentP4");
 
     // make form for opponent
+    username = localStorage.getItem("username");
     const opponentForm = document.createElement("form");
     opponentForm.id = "opponentForm";
     const opponentLabel = document.createElement("label");
@@ -97,7 +99,7 @@ function makeDualTournamentsButtons() {
     opponentForm.appendChild(submitButton);
     appContainer = document.getElementById("app");
     appContainer.appendChild(opponentForm);
-    opponentForm.addEventListener("submit", (e) => {
+    opponentForm.addEventListener("submit", async (e) => {
       if (opponentInput.value === "") {
         alert("상대 이름을 입력해 주세요.");
         return;
@@ -105,14 +107,21 @@ function makeDualTournamentsButtons() {
         alert("자신을 상대로 할 수 없습니다.");
         return;
       }
-
+      const json = await checkFriendRelation(username, opponentInput.value);
+      console.log(json);
+      if (json["is_friend"] === false || json["is_friended_by"] === false) {
+        alert("서로 팔로우되어있지 않습니다.");
+        return;
+      }
+    
+    
       e.preventDefault();
       // oppenent만 local storage에 저장
       const opponent = document.getElementById("opponentInput").value;
       localStorage.setItem("opponent", opponent);
-
+    
       removeChildNodes(appContainer);
-
+    
       initGame();
     });
   });
