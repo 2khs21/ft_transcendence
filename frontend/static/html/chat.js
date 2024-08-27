@@ -142,6 +142,7 @@ async function sendMessage() {
 
   // 귓속말 처리
   if (message.startsWith("/w ")) {
+    console.log("whisper");
     const parts = message.split(" ");
     if (parts.length >= 3) {
       to_username = parts[1];
@@ -209,7 +210,7 @@ async function handleSpecialCommands(message, username) {
   }
   if (
     message.startsWith("/") &&
-    !message.startsWith("/w  ") &&
+    !message.startsWith("/w ") &&
     !message.startsWith("/invite ")
   ) {
     displayMessage({
@@ -243,7 +244,7 @@ function escapeHtml(unsafe) {
 async function displayMessage(data) {
   const mutedList = await getMutedList();
   if (mutedList && isUserInList(data.username, mutedList)) {
-    console.log(`Message from muted user ${message.sender} was blocked`);
+    console.log(`Message from muted user ${data.username} was blocked`);
     return;
   }
   const chatBox = document.querySelector("#chat-box");

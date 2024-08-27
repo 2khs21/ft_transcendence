@@ -92,7 +92,6 @@ export async function authenticatedFetch(url, options = {}) {
         continue;
       }
     }
-
     const token = localStorage.getItem("accessToken");
     const headers = {
       ...options.headers,

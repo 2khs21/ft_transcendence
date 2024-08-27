@@ -72,7 +72,6 @@ async function handleOAuthCallback() {
     const urlParams = new URLSearchParams(window.location.search);
     accessToken = urlParams.get("access_token");
     refreshToken = urlParams.get("refresh_token");
-    console.log("look at me");
     console.log("urlParams : ", urlParams);
     console.log("accessToken : ", accessToken);
     console.log("refreshToken : ", refreshToken);

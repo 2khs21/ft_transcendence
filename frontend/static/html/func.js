@@ -152,7 +152,7 @@ export async function getOtherUserProfile(username) {
     return null;
   }
 }
-
+// 나를 팔로우하는 유저라면 게임 진행, 나만 팔로우한다면 첫 번째만 true 상대가 나를 팔로우한다면 두 번째만 true
 export async function checkFriendRelation(user1, user2) {
   try {
     console.log(`Checking friend relation between ${user1} and ${user2}...`);
@@ -170,6 +170,7 @@ export async function checkFriendRelation(user1, user2) {
       `Error checking friend relation between ${user1} and ${user2}:`,
       error
     );
+    console.log("Error checking friend relation!!!!!!!!!!!!!");
     return { is_friend: false, is_friended_by: false };
   }
 }
