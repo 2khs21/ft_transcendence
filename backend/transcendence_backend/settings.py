@@ -61,10 +61,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-c)87kb0oh&wa((m(%wm6@xuno$mg-)1u2#%a&&5bqyw_j8q-8o'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -99,7 +99,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True  # 개발 환경에서만 사용. 프로덕션에서는 특정 오리진만 허용하도록 설정
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'transcendence_backend.urls'
 
@@ -212,14 +212,11 @@ AUTH_USER_MODEL = 'users.User'
 
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
-CSRF_COOKIE_SECURE = False # HTTP를 사용하는 경우
-# CSRF_COOKIE_SECURE = True  # HTTPS를 사용하는 경우
+CSRF_COOKIE_SECURE = True
 CSRF_USE_SESSIONS = False  # 세션 대신 쿠키 사용
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",  # 예시: 프론트엔드가 동작하는 로컬 호스트 주소
     "https://localhost:443",
-    "https://example.com",    # 예시: 프로덕션 도메인
-    # 다른 허용할 도메인들을 여기에 추가하세요.
 ]
 
 MEDIA_URL = '/media/'
@@ -232,8 +229,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.naver.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = '2khs21@naver.com'
-EMAIL_HOST_PASSWORD = 'Rla1q2w3e4r!'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EMAIL_DEBUG = True
 
