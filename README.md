@@ -23,3 +23,35 @@ graph TD
     DA <--> R
     D -- Channel Events --> R
 ```
+
+```mermaid
+erDiagram
+    USERS {
+        int id PK
+        varchar username
+        varchar email
+        varchar avatar_url
+        datetime created_at
+    }
+
+    GAMES {
+        int id PK
+        int player1_id FK
+        int player2_id FK
+        int player1_score
+        int player2_score
+        varchar status
+        datetime played_at
+    }
+
+    CHAT_MESSAGES {
+        int id PK
+        int user_id FK
+        text message
+        datetime timestamp
+    }
+
+    USERS ||--o{ GAMES : "plays as player1"
+    USERS ||--o{ GAMES : "plays as player2"
+    USERS ||--o{ CHAT_MESSAGES : "sends"
+```
