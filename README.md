@@ -1,5 +1,5 @@
 # ft_transcendence
-
+```mermaid
 graph TD
     subgraph Client
         B(Browser)
@@ -22,3 +22,4 @@ graph TD
     D <--> P[DB]
     DA <--> R
     D -- Channel Events --> R
+```
